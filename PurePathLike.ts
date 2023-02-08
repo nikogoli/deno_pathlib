@@ -18,8 +18,13 @@ export class PurePathLike {
   constructor(
     ...paths: Array<string | PurePathLike>
   ) {
+    if (paths[0] == undefined){ throw new Error("At least one input is needed") }
     
-    const joined = DenoPath.join(...paths.map(arg => (typeof arg == "string") ? arg : arg.path))
+    const args = paths.map(arg => (typeof arg == "string") ? arg : arg.path)
+    const reviesed = (args[0].match(/\w:$/) && args.length >= 2)
+        ? [args[0]+args[1], ...args.slice(2)]
+        : args  // ["C:","Users","Default"] → OK:"C:Users/Default",  NOT："C:/Users/Default"
+    const joined = DenoPath.join(...reviesed)
     this.path = joined.length > 1 && joined.endsWith(".") ? joined.slice(0, -1) : joined
     //console.log(this.path)
 
