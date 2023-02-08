@@ -117,4 +117,93 @@ export class PurePathLike {
       )
     }
   }
+
+
+  as_posix() {
+    return this.path.replaceAll("\\", "/")
+  }
+
+
+  as_uri() {
+    return DenoPath.toFileUrl(this.path).href
+  }
+
+
+  is_absolute(){
+    return DenoPath.isAbsolute(this.path)
+  }
+
+
+  is_relative_to(target: string | PurePathLike) {
+    const temp = typeof target == "string" ? new PurePathLike(target) : target
+    const is_not_match = temp.parts.map((part,idx) => part == this.parts[idx]).some(x => x === false)
+    return !is_not_match
+  }
+
+  
+  joinpath(...args: Array<string | PurePathLike>) {
+    return new PurePathLike(this.path, ...args)
+  }
+
+
+  match(pattern: string | RegExp) {
+    const reg_ptn = (pattern instanceof RegExp) ? pattern : DenoPath.globToRegExp(pattern)
+    return this.path.match(reg_ptn) !== null
+  }
+
+
+  relative_to(target: string | PurePathLike) {
+    const temp = typeof target == "string" ? new PurePathLike(target) : target
+    if (this.is_absolute() == temp.is_absolute()){
+      const is_not_match = temp.parts.map((part,idx) => part == this.parts[idx]).some(x => x === false)
+      if (is_not_match == false){
+        if (this.path == temp.path){
+          return new PurePathLike(".")
+        } else {
+          const sub_parts = this.parts.filter(x => temp.parts.includes(x) == false)
+          return new PurePathLike(...sub_parts)
+        }
+      } else {
+        throw new Error(`'${this.path}' is not in the subpath of '${temp.path}'`)
+      }
+    } else {
+      throw new Error("One path is relative and the other absolute.")
+    }
+  }
+
+
+  with_name(name:string) {
+    if (this.name == ""){
+      throw new Error("Cannot replace when original path's name is empty")
+    }
+    if (this.parent.path == "."){
+      return new PurePathLike(name)
+    } else {
+      return new PurePathLike(this.parent, name)
+    }
+  }
+
+
+  with_stem(stem:string) {
+    if (this.stem == ""){
+      throw new Error("Cannot replace when original path's stem is empty")
+    }
+    if (this.parent.path == "."){
+      return new PurePathLike(`${stem}${this.suffix}`)
+    } else {
+      return new PurePathLike(this.parent, `${stem}${this.suffix}`)
+    }
+  }
+
+  with_suffix(suffix:string){
+    if (this.name == ""){
+      throw new Error("Cannot replace when original path's name is empty")
+    }
+    const new_suf = suffix.startsWith(".") ? suffix : "." + suffix
+    if (this.parent.path == "."){
+      return new PurePathLike(`${this.stem}${new_suf}`)
+    } else {
+      return new PurePathLike(this.parent, `${this.stem}${new_suf}`)
+    }
+  }
 }
