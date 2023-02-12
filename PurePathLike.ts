@@ -1,4 +1,8 @@
 import * as DenoPath from "https://deno.land/std@0.170.0/path/mod.ts"
+import * as DenoFS from "https://deno.land/std@0.177.0/fs/mod.ts"
+
+
+type NotPromise<T> = T extends Promise<any> ? never : T
 
 
 export class PurePathLike {
@@ -11,14 +15,27 @@ export class PurePathLike {
   suffixes: Array<string> = []
   suffix = ""
   stem = ""
-  parents: () => Array<PurePathLike>;
-  parent: PurePathLike;
+  parents: () => Array<PurePathLike | PathLike>;
+  parent: () => PurePathLike | PathLike;
   
 
   constructor(
-    ...paths: Array<string | PurePathLike>
+    ...paths: Array<string | PurePathLike | PathLike>
   ) {
-    if (paths[0] == undefined){ throw new Error("At least one input is needed") }
+    if (paths[0] == undefined){ // PathLike().cwd() のために許容する
+      this.parts = [""]
+      this.drive = ""
+      this.root = ""
+      this.anchor = ""
+      this.name = ""
+      this.suffixes = []
+      this.suffix = ""
+      this.stem = ""
+      this.parents = () => []
+      this.parent = () => this
+      return
+      // throw new Error("At least one input is needed")
+    }
     
     const args = paths.map(arg => (typeof arg == "string") ? arg : arg.path)
     const reviesed = (args[0].match(/\w:$/) && args.length >= 2)
@@ -38,7 +55,7 @@ export class PurePathLike {
       this.suffix = ""
       this.stem = ""
       this.parents = () => []
-      this.parent = this
+      this.parent = () => this
       return
     }
     else if (this.path == ".") {
@@ -51,7 +68,7 @@ export class PurePathLike {
       this.suffix = ""
       this.stem = ""
       this.parents = () => []
-      this.parent = this
+      this.parent = () => this
       return
     }
 
@@ -84,33 +101,33 @@ export class PurePathLike {
 
     if (this.parts.length == 1){
       if (this.parts[0] == this.anchor){
-        this.parent = this
+        this.parent = () => this
         this.parents = () => []
       } else {
-        const dot = new PurePathLike(".")
-        this.parent = dot
+        const dot = new PathLike(".")
+        this.parent = () => dot
         this.parents = () => [dot]
       }
     }
     else if (this.parts.length == 2){
-      this.parent = new PurePathLike(this.parts[0])
-      this.parents = () => [this.parent]
+      this.parent = () => new PathLike(this.parts[0])
+      this.parents = () => [this.parent()]
     }
     else if (this.parts.length == 3){
-      const top_par = new PurePathLike(this.parts[0])
-      this.parent = new PurePathLike(
+      const top_par = new PathLike(this.parts[0])
+      this.parent = () => new PathLike(
         (this.anchor != "") ? this.parts.slice(0,-1).join("") : DenoPath.join(...this.parts.slice(0,-1))
       )
-      this.parents = () => [ top_par, this.parent ]
+      this.parents = () => [ top_par, this.parent() ]
     }
     else {
-      const top_par = new PurePathLike(this.parts[0])
-      const second_par = new PurePathLike(
+      const top_par = new PathLike(this.parts[0])
+      const second_par = new PathLike(
         (this.anchor != "") ? this.parts.slice(0,2).join("") : DenoPath.join(...this.parts.slice(0,2))
       )
-      this.parent = new PurePathLike(second_par, ...this.parts.slice(2,-1))
+      this.parent = () => new PathLike(second_par, ...this.parts.slice(2,-1))
       this.parents = () => this.parts.slice(2,-1).reduce( (combineds, part) => {
-          combineds.push( new PurePathLike(combineds.at(-1)!, part) )
+          combineds.push( new PathLike(combineds.at(-1)!, part) )
           return combineds
         },
         [top_par, second_par]
@@ -134,15 +151,15 @@ export class PurePathLike {
   }
 
 
-  is_relative_to(target: string | PurePathLike) {
-    const temp = typeof target == "string" ? new PurePathLike(target) : target
+  is_relative_to(target: string | PurePathLike | PathLike): boolean {
+    const temp = typeof target == "string" ? new PathLike(target) : target
     const is_not_match = temp.parts.map((part,idx) => part == this.parts[idx]).some(x => x === false)
     return !is_not_match
   }
 
   
-  joinpath(...args: Array<string | PurePathLike>) {
-    return new PurePathLike(this.path, ...args)
+  joinpath(...args: Array<string | PurePathLike | PathLike>) {
+    return new PathLike(this.path, ...args)
   }
 
 
@@ -152,16 +169,16 @@ export class PurePathLike {
   }
 
 
-  relative_to(target: string | PurePathLike) {
-    const temp = typeof target == "string" ? new PurePathLike(target) : target
+  relative_to(target: string | PurePathLike | PathLike) {
+    const temp = typeof target == "string" ? new PathLike(target) : target
     if (this.is_absolute() == temp.is_absolute()){
       const is_not_match = temp.parts.map((part,idx) => part == this.parts[idx]).some(x => x === false)
       if (is_not_match == false){
         if (this.path == temp.path){
-          return new PurePathLike(".")
+          return new PathLike(".")
         } else {
           const sub_parts = this.parts.filter(x => temp.parts.includes(x) == false)
-          return new PurePathLike(...sub_parts)
+          return new PathLike(...sub_parts)
         }
       } else {
         throw new Error(`'${this.path}' is not in the subpath of '${temp.path}'`)
@@ -176,10 +193,10 @@ export class PurePathLike {
     if (this.name == ""){
       throw new Error("Cannot replace when original path's name is empty")
     }
-    if (this.parent.path == "."){
-      return new PurePathLike(name)
+    if (this.parent().path == "."){
+      return new PathLike(name)
     } else {
-      return new PurePathLike(this.parent, name)
+      return new PathLike(this.parent(), name)
     }
   }
 
@@ -188,10 +205,10 @@ export class PurePathLike {
     if (this.stem == ""){
       throw new Error("Cannot replace when original path's stem is empty")
     }
-    if (this.parent.path == "."){
-      return new PurePathLike(`${stem}${this.suffix}`)
+    if (this.parent().path == "."){
+      return new PathLike(`${stem}${this.suffix}`)
     } else {
-      return new PurePathLike(this.parent, `${stem}${this.suffix}`)
+      return new PathLike(this.parent(), `${stem}${this.suffix}`)
     }
   }
 
@@ -200,8 +217,13 @@ export class PurePathLike {
       throw new Error("Cannot replace when original path's name is empty")
     }
     const new_suf = suffix.startsWith(".") ? suffix : "." + suffix
-    if (this.parent.path == "."){
-      return new PurePathLike(`${this.stem}${new_suf}`)
+    if (this.parent().path == "."){
+      return new PathLike(`${this.stem}${new_suf}`)
+    } else {
+      return new PathLike(this.parent(), `${this.stem}${new_suf}`)
+    }
+  }
+}
     } else {
       return new PurePathLike(this.parent, `${this.stem}${new_suf}`)
     }

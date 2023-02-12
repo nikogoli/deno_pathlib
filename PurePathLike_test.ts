@@ -1,4 +1,5 @@
-import { assertEquals, assertIsError, assertNotEquals } from "https://deno.land/std@0.170.0/testing/asserts.ts"
+import { assertEquals, assertIsError, assertNotEquals, assertExists,  } from "https://deno.land/std@0.170.0/testing/asserts.ts"
+import * as DenoFS from "https://deno.land/std@0.177.0/fs/mod.ts"
 
 import { PurePathLike } from "./PurePathLike.ts"
 
@@ -220,10 +221,11 @@ function same_check(A:PurePathLike, B:PurePathLike){
   assertEquals(A.suffixes, B.suffixes)
   assertEquals(A.parts, B.parts)
   assertEquals(A.parents().map(p => p.path), B.parents().map(p => p.path))
-  assertEquals(A.parent.path, B.parent.path)
+  assertEquals(A.parent().path, B.parent().path)
 }
 
 // ----------- construct ---------------
+/*
 Deno.test("作成：空入力はエラー", () => {
   try {
     new PurePathLike()
@@ -232,7 +234,7 @@ Deno.test("作成：空入力はエラー", () => {
     assertIsError(error, Error, "At least one input is needed") 
   }
 })
-
+*/
 
 // ------------- single input  --------------------
 Deno.test("単一パス入力 → attr", async (t) => {
@@ -280,7 +282,7 @@ Deno.test("単一パス入力 → attr", async (t) => {
         assertEquals(base_by_win.parents().map(p => p.path), parents_paths)
       })
       await _tt.step(`OK: ${label} の parent の path が正しい`, () => {
-        assertEquals(base_by_win.parent.path, parent_path)
+        assertEquals(base_by_win.parent().path, parent_path)
       })
     })
   } ), Promise.resolve())
@@ -540,4 +542,5 @@ Deno.test("メソッド with_suffix: suffix を差し替えたパスによるパ
       await t.step(TEST.text, TEST.func) 
     }),Promise.resolve()
   )
+})
 })
