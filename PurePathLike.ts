@@ -224,8 +224,430 @@ export class PurePathLike {
     }
   }
 }
-    } else {
-      return new PurePathLike(this.parent, `${this.stem}${new_suf}`)
+
+
+
+export class PathLike extends PurePathLike {
+  #_is_dir: boolean | undefined = undefined
+  #_is_file: boolean | undefined = undefined
+  #_is_symlink: boolean | undefined = undefined
+
+  cwd() {
+    return new PathLike(Deno.cwd())
+  }
+
+  async chmod(mode:number) {
+    await Deno.chmod(this.path, mode)
+  }
+
+  chmodSync(mode: number){
+    Deno.chmodSync(this.path, mode)
+  }
+
+  async exists() {
+    try {
+      const _x = await this.stat()
+      return true
+    } catch (_error) {
+      return false
     }
   }
+
+  existsSync() {
+    try {
+      const _x = this.stat()
+      return true
+    } catch (_error) {
+      return false
+    }
+  }
+
+  is_dir() {
+    if (this.#_is_dir){
+      return this.#_is_dir
+    } else {
+      const info = Deno.lstatSync(this.path)
+      this.#set_info(info.isDirectory, info.isFile, info.isSymlink)
+      return info.isDirectory
+    }
+  }
+
+  is_file() {
+    if (this.#_is_file){
+      return this.#_is_file
+    } else {
+      const info = Deno.lstatSync(this.path)
+      this.#set_info(info.isDirectory, info.isFile, info.isSymlink)
+      return info.isFile
+    }
+  }
+
+  is_symlink() {
+    if (this.#_is_symlink){
+      return this.#_is_symlink
+    } else {
+      const info = Deno.lstatSync(this.path)
+      this.#set_info(info.isDirectory, info.isFile, info.isSymlink)
+      return info.isSymlink
+    }
+  }
+
+  iterdir() {
+    return Deno.readDir(this.path)
+  }
+
+  async iterdirMap<T>(
+    callbackAsyncFunc: (value: PathLike, index: number) => Promise<T>,
+  ): Promise<Array<T>> {
+    const outputs: Array<T> = []
+    let i = 0
+    for await (const entry of this.iterdir()){
+      const p = this.joinpath(entry.name)
+      const { isDirectory, isFile, isSymlink } = entry
+      p.#set_info(isDirectory, isFile, isSymlink)
+      outputs.push( await callbackAsyncFunc(p, i++) )
+    }
+    return outputs
+  }
+
+
+  async iterdirMapSync<T>(
+    callbackSyncFunc: (value: PathLike, index: number) => NotPromise<T>,
+  ): Promise<Array<NotPromise<T>>> {
+    const outputs: Array<NotPromise<T>> = []
+    let i = 0
+    for await (const entry of this.iterdir()){
+      const p = this.joinpath(entry.name)
+      const { isDirectory, isFile, isSymlink } = entry
+      p.#set_info(isDirectory, isFile, isSymlink)
+      outputs.push(callbackSyncFunc(p, i++))
+    }
+    return outputs
+  }
+
+  statSync() {
+    return Deno.statSync(this.path)
+  }
+
+  async stat() {
+    return await Deno.stat(this.path)
+  }
+
+  lstatSync() {
+    return Deno.lstatSync(this.path)
+  }
+
+  async lstat() {
+    return await Deno.lstat(this.path)
+  }
+
+  mkdirSync(
+    option?: {mode?:number, parents?: boolean}
+  ){
+    const opt: Parameters<typeof Deno.mkdirSync>["1"] = option?.parents ? {...option, recursive: option.parents} : option
+    Deno.mkdirSync(this.path, opt)
+  }
+
+  async mkdir(
+    option?: {mode?:number, parents?: boolean}
+  ){
+    const opt: Parameters<typeof Deno.mkdirSync>["1"] = option?.parents ? {...option, recursive: option.parents} : option
+    await Deno.mkdir(this.path, opt)
+  }
+
+  openSync(option?: {
+    mode? : "r" | "w" | "x" | "a",
+    truncate?: true,
+    create?: true,
+    createNew?: true,
+    PermissionMode?: number,
+  }) {
+    const opt:Deno.OpenOptions = {
+      read: option?.mode == "r",
+      write: option?.mode == "w" || option?.truncate || option?.create || option?.createNew,
+      append: option?.mode == "a",
+      truncate: option?.truncate,
+      create: option?.create,
+      createNew: option?.createNew,
+      mode: option?.PermissionMode
+    }
+
+    if (option?.mode == "x"){
+      try {
+        const _x = this.statSync()
+        throw new Error(`Path '${this.path}' already exists.`)
+      } catch (_error) {
+        return Deno.openSync(this.path, {...opt, write: true, create:true})
+      }
+    } else {
+      return Deno.openSync(this.path, opt)
+    }
+  }
+  
+  async open(option?: {
+    mode? : "r" | "w" | "x" | "a",
+    truncate?: true,
+    create?: true,
+    createNew?: true,
+    PermissionMode?: number,
+  }) {
+    const opt:Deno.OpenOptions = {
+      read: option?.mode == "r",
+      write: option?.mode == "w" || option?.truncate || option?.create || option?.createNew,
+      append: option?.mode == "a",
+      truncate: option?.truncate,
+      create: option?.create,
+      createNew: option?.createNew,
+      mode: option?.PermissionMode
+    }
+
+    if (option?.mode == "x"){
+      try {
+        const _x = this.statSync()
+        throw new Error(`Path '${this.path}' already exists.`)
+      } catch (_error) {
+        return Deno.openSync(this.path, {...opt, write: true, create:true})
+      }    
+    } else {
+      return await Deno.open(this.path, opt)
+    }
+  }
+
+  read_bytesSync() {
+    return Deno.readFileSync(this.path)
+  }
+
+  async read_bytes() {
+    return await Deno.readFile(this.path)
+  }
+
+  async read_text(encoding?: "utf-8" | string) {
+    if (encoding && encoding != "utf-8"){
+      const Decoder = new TextDecoder(encoding)
+      return await Deno.readFile(this.path).then(dat => Decoder.decode(dat))
+    } else {
+      return await Deno.readTextFile(this.path)
+    }
+  }
+
+  read_textSync(encoding?: "utf-8" | string) {
+    if (encoding && encoding != "utf-8"){
+      const Decoder = new TextDecoder(encoding)
+      const dat = Deno.readFileSync(this.path)
+      return Decoder.decode(dat)
+    } else {
+      return Deno.readTextFileSync(this.path)
+    }
+  }
+
+  async readlink() {
+    return await Deno.readLink(this.path)
+  }
+
+  readlinkSync() {
+    return Deno.readLinkSync(this.path)
+  }
+
+  async rename(...args: Array<string | PurePathLike | PathLike>) {
+    const new_p = new PathLike(...args)
+    try {
+      const _x = new_p.statSync()
+    } catch (_error) {
+      await Deno.rename(this.path, new_p.path)
+      return new_p 
+    }
+    throw new Error(`target ${new_p.path} already exists.`)
+  }
+
+  renameSync(...args: Array<string | PurePathLike | PathLike>) {
+    const new_p = new PathLike(...args)
+    try {
+      const _x = new_p.statSync()
+    } catch (_error) {
+      Deno.renameSync(this.path, new_p.path)
+      return new_p
+    }
+    throw new Error(`target ${new_p.path} already exists.`)
+  }
+
+  async replace(...args: Array<string | PurePathLike | PathLike>) {
+    const new_p = new PathLike(...args)
+    await Deno.rename(this.path, new_p.path)
+    return new_p 
+  }
+
+  replaceSync(...args: Array<string | PurePathLike | PathLike>) {
+    const new_p = new PathLike(...args)
+    Deno.renameSync(this.path, new_p.path)
+    return new_p
+  }
+
+  resolve(strict?: true) {
+    const resolved = DenoPath.resolve(this.path)
+    if (strict){
+      new PathLike(resolved).existsSync()
+    }
+    return resolved
+  }
+
+  async remove() {
+    await Deno.remove(this.path)
+  }
+
+  removeSync() {
+    Deno.removeSync(this.path)
+  }
+
+  async symlink(
+    link_to:string | PurePathLike | PathLike,
+    type: "file" | "dir"
+  ) {
+    const link_path = new PathLike(link_to).path
+    await Deno.symlink(link_path, this.path, {type})
+  }
+
+  symlinkSync(
+    link_to:string | PurePathLike | PathLike,
+    type: "file" | "dir"
+  ) {
+    const link_path = new PathLike(link_to).path
+    Deno.symlinkSync(link_path, this.path, {type})
+  }
+
+  async touch(option?:{
+    mode?:number,
+    exist_ok?:false
+  }) {
+    if (option?.exist_ok == false){
+      const is_exist = await this.exists()
+      if (is_exist){
+        throw new Error(`path ${this.path} already exists.`)
+      }
+    }
+    await DenoFS.ensureFile(this.path)
+    if (option?.mode){
+      await this.chmod(option.mode)
+    }
+  }
+
+
+  touchSync(option? :{
+    mode?:number,
+    exist_ok?:false
+  }) {
+    if (option?.exist_ok == false){
+      const is_exist = this.existsSync()
+      if (is_exist){
+        throw new Error(`path ${this.path} already exists.`)
+      }
+    }
+    DenoFS.ensureFileSync(this.path)
+    if (option?.mode){
+      this.chmodSync(option.mode)
+    }
+  }
+
+  async write_bytes(
+    data: Uint8Array,
+    option?: {
+      mode? : "x" | "a",
+      create?: false,
+      createNew?: true,
+      PermissionMode?: number,
+    }
+  ) {
+    if (option && option.mode == "x"){
+      const is_exist = await this.exists()
+      if (is_exist){
+        throw new Error(`path ${this.path} is already exists.`)
+      }
+    }
+    const opt:Deno.WriteFileOptions = {
+      append: option?.mode == "a",
+      create: option?.create,
+      createNew: option?.createNew,
+      mode: option?.PermissionMode
+    }
+    await Deno.writeFile(this.path, data, opt)
+  }
+
+  write_bytesSync(
+    data: Uint8Array,
+    option?: {
+      mode? : "x" | "a",
+      create?: false,
+      createNew?: true,
+      PermissionMode?: number,
+    }
+  ) {
+    if (option && option.mode == "x"){
+      const is_exist = this.existsSync()
+      if (is_exist){
+        throw new Error(`path ${this.path} is already exists.`)
+      }
+    }
+    const opt:Deno.WriteFileOptions = {
+      append: option?.mode == "a",
+      create: option?.create,
+      createNew: option?.createNew,
+      mode: option?.PermissionMode
+    }
+    Deno.writeFileSync(this.path, data, opt)
+  }
+
+  async write_text(
+    data: string,
+    option?: {
+      mode? : "x" | "a",
+      create?: false,
+      createNew?: true,
+      PermissionMode?: number,
+    }
+  ) {
+    if (option && option.mode == "x"){
+      const is_exist = await this.exists()
+      if (is_exist){
+        throw new Error(`path ${this.path} is already exists.`)
+      }
+    }
+    const opt:Deno.WriteFileOptions = {
+      append: option?.mode == "a",
+      create: option?.create,
+      createNew: option?.createNew,
+      mode: option?.PermissionMode
+    }
+    await Deno.writeTextFile(this.path, data, opt)
+  }
+
+  write_textSync(
+    data: string,
+    option?:{
+      mode? : "x" | "a",
+      create?: false,
+      createNew?: true,
+      PermissionMode?: number,
+    }
+  ) {
+    if (option && option.mode == "x"){
+      const is_exist = this.existsSync()
+      if (is_exist){
+        throw new Error(`path ${this.path} is already exists.`)
+      }
+    }
+    const opt:Deno.WriteFileOptions = {
+      append: option?.mode == "a",
+      create: option?.create,
+      createNew: option?.createNew,
+      mode: option?.PermissionMode
+    }
+    Deno.writeTextFileSync(this.path, data, opt)
+  }
+
+  #set_info(is_d:boolean, is_f:boolean, is_s:boolean){
+    this.#_is_dir = is_d
+    this.#_is_file = is_f
+    this.#_is_symlink = is_s
+  }
 }
+
+

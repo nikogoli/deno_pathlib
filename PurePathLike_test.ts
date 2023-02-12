@@ -1,7 +1,8 @@
 import { assertEquals, assertIsError, assertNotEquals, assertExists,  } from "https://deno.land/std@0.170.0/testing/asserts.ts"
 import * as DenoFS from "https://deno.land/std@0.177.0/fs/mod.ts"
 
-import { PurePathLike } from "./PurePathLike.ts"
+import { PurePathLike, PathLike } from "./PurePathLike.ts"
+
 
 const Absolute = {
   posix: "C:/Users/Default/AppData/Local/Microsoft/Windows/Shell/DefaultLayouts.tar.gz",
@@ -543,4 +544,662 @@ Deno.test("メソッド with_suffix: suffix を差し替えたパスによるパ
     }),Promise.resolve()
   )
 })
+
+
+// -------------- PathLike ---------------------
+Deno.test("メソッド cwd: カレントディレクトリのパスオブジェクトを返す", () => {
+  const actual = new PathLike().cwd().path
+  const expected = Deno.cwd()
+  assertEquals(actual, expected)
+})
+
+
+Deno.test("メソッド is_dir: ディレクトリかどうかを判定", async t => {
+  const base_dir = new PathLike("test_data", "data_1")
+  const dir_p = new PathLike(base_dir, "data_1_1")
+  const dir_link_p = new PathLike(base_dir, "data_1_1_link")
+  const file_p = new PathLike(base_dir, "text_1.txt")
+  const file_link_p = new PathLike(base_dir, "text_1_link.txt")
+
+  await [{p:dir_p, b:true}, {p:dir_link_p, b:true}, {p:file_p, b:false}, {p:file_link_p, b:false}]
+    .reduce((pre, {p, b}) => pre.then(async () => {
+        await t.step(`OK: ${p.name} では is_dir = ${b}`, () => {
+          assertEquals(p.is_dir(), b)
+        })
+    }), Promise.resolve()
+  )
+})
+
+
+Deno.test("メソッド is_file: ファイルかどうかを判定", async t => {
+  const base_dir = new PathLike("test_data", "data_1")
+  const dir_p = new PathLike(base_dir, "data_1_1")
+  const dir_link_p = new PathLike(base_dir, "data_1_1_link")
+  const file_p = new PathLike(base_dir, "text_1.txt")
+  const file_link_p = new PathLike(base_dir, "text_1_link.txt")
+
+  await [{p:dir_p, b:false}, {p:dir_link_p, b:false}, {p:file_p, b:true}, {p:file_link_p, b:true}]
+    .reduce((pre, {p, b}) => pre.then(async () => {
+        await t.step(`OK: ${p.name} では is_file = ${b}`, () => {
+          assertEquals(p.is_file(), b)
+        })
+    }), Promise.resolve()
+  )
+})
+
+
+Deno.test("メソッド is_symlink: シンボリックリンクかどうかを判定", async t => {
+  const base_dir = new PathLike("test_data", "data_1")
+  const dir_p = new PathLike(base_dir, "data_1_1")
+  const dir_link_p = new PathLike(base_dir, "data_1_1_link")
+  const file_p = new PathLike(base_dir, "text_1.txt")
+  const file_link_p = new PathLike(base_dir, "text_1_link.txt")
+
+  await [{p:dir_p, b:false}, {p:dir_link_p, b:true}, {p:file_p, b:false}, {p:file_link_p, b:true}]
+    .reduce((pre, {p, b}) => pre.then(async () => {
+        await t.step(`OK: ${p.name} では is_symlink = ${b}`, () => {
+          assertEquals(p.is_symlink(), b)
+        })
+    }), Promise.resolve()
+  )
+})
+
+
+Deno.test("メソッド iterdir: DenoFS.walk(this.path, {maxDepth: 1, ...options}) を返す", async () => {
+  const p = new PathLike("test_data", "data_1")
+  const actual:Array<string> = []
+  const expected:Array<string> = []
+  for await (const val of Deno.readDir(p.path)){
+    actual.push(val.name)
+  }
+  for await (const val of p.iterdir()){
+    expected.push(val.name)
+  }
+  assertEquals(actual, expected)
+})
+
+
+Deno.test("メソッド iterdirMap: iterdir() の返り値に対して .map() のように非同期処理を適用する", async () => {
+  const p = new PathLike("test_data", "data_1")
+  const expected = [
+    "data_1_1", , "before.txt", "euc-jp.txt", "data_1_1_link",
+    "sample", "shift_jis.txt", "text_1.txt", "text_1_link.txt"
+  ].sort()
+  const actual = await p.iterdirMap(async p => await Promise.resolve().then(() => p.name))
+      .then(lis => lis.sort())
+  assertEquals(actual, expected)
+})
+
+
+
+Deno.test("メソッド iterdirMapSync: iterdir() の返り値に対して .map() のように同期処理を適用する", async () => {
+  const p = new PathLike("test_data", "data_1")
+  const expected = [
+    "data_1_1", , "before.txt", "euc-jp.txt", "data_1_1_link",
+    "sample", "shift_jis.txt", "text_1.txt",  "text_1_link.txt"
+  ].sort()
+  const actual = await p.iterdirMapSync( p =>  p.name).then(lis => lis.sort())
+  assertEquals(actual, expected)
+})
+
+
+Deno.test("メソッド mkdir: 指定したパスにディレクトリ作成", async t => {
+  const test_dir = new PathLike("test_data")
+  const direct_child = new PathLike(test_dir, "child_dir")
+  const nested_child = new PathLike(test_dir, "nest", "child_dir")
+
+  await t.step(`OK: 直下にディレクトリを作成`, async () => {
+    await direct_child.mkdir()
+    const iter = Deno.readDir(direct_child.path)
+    assertExists(iter)
+    await Deno.remove(direct_child.path)
+  })
+
+  await t.step(`Fail-OK: 経路に存在しないディレクトリがある場合はエラー`, async () => {
+    try {
+      await nested_child.mkdir() 
+    } catch (error) {
+     assertIsError(error, Error, "指定されたパスが見つかりません。")
+    }
+  })
+
+  await t.step(`OK: 経路に存在しないディレクトリがある場合に {parents:true} オプションを与えると成功`, async () => {
+    await nested_child.mkdir({parents: true})
+    const iter = Deno.readDir(nested_child.path)
+    assertExists(iter)
+    await Deno.remove(nested_child.path, {recursive:true})
+  })
+})
+
+
+Deno.test("メソッド open: ファイルを開いて Deno.FsFile を返す", async t => {
+  const text_path = new PathLike("test_data", "data_1", "text_1.txt")
+  const not_exist_path = new PathLike("test_data", "data_1", "text_99.txt")
+
+  await (["w", "r", "a"] as const).reduce( (pre, mode) => pre.then(async () => {
+    await t.step(`OK: mode ${mode} で text_1.txt を開く`, async () => {
+      const file = await text_path.open({mode})
+      assertExists(file)
+      file.close()
+    })
+  }) , Promise.resolve())
+
+  await t.step(`OK: {truncate: true} で text_1.txt を開く`, async () => {
+    const file = await text_path.open({mode:"w", truncate:true})
+    assertExists(file)
+    file.close()
+  })
+  
+  await t.step(`Fail-OK: mode "x" ですでに存在する text_1.txt を開くとエラー`, async () => {
+    try {
+      const file = await text_path.open({mode: "x"})
+      file.close()
+    } catch (error) {
+      assertIsError(error, Error, "already exists.")
+    }
+  })
+
+  let is_x2__OK = await t.step(`OK: mode "x" で存在しない text_99.txt を指定すると作成してそれを開く`, async () => {
+    const file = await not_exist_path.open({mode: "x"})
+    assertExists(file)
+    file.close()
+    await Deno.remove(not_exist_path.path)
+  })
+  if (is_x2__OK == false){
+    console.log(`text_99.txt が削除されていない可能性があるので停止`)
+    return
+  }
+
+  is_x2__OK = await t.step(`OK: {create: true} のときは存在しない text_99.txt を作成して開く`, async () => {
+    const file = await not_exist_path.open({create: true})
+    assertExists(file)
+    file.close()
+    await Deno.remove(not_exist_path.path)
+  })
+  if (is_x2__OK == false){
+    console.log(`text_99.txt が削除されていない可能性があるので停止`)
+    return
+  }
+
+  is_x2__OK = await t.step(`OK: {createNew: true} のときは存在しない text_99.txt を作成して開く`, async () => {
+    const file = await not_exist_path.open({createNew: true})
+    assertExists(file)
+    file.close()
+    await Deno.remove(not_exist_path.path)
+  })
+  if (is_x2__OK == false){
+    console.log(`text_99.txt が削除されていない可能性があるので停止`)
+    return
+  }
+
+  await t.step(`Fail-OK: {createNew: true} ですでに存在する text_1.txt を開くとエラー`, async () => {
+    try {
+      const file = await text_path.open({createNew: true})
+      file.close()
+    } catch (error) {
+      assertIsError(error, Error, "ファイルがあります")
+    }
+  })
+})
+
+
+Deno.test("メソッド openSync: ファイルを開いて Deno.FsFile を返す", async t => {
+  const text_path = new PathLike("test_data", "data_1", "text_1.txt")
+  const not_exist_path = new PathLike("test_data", "data_1", "text_99.txt")
+
+  await (["w", "r", "a"] as const).reduce( (pre, mode) => pre.then(async () => {
+    await t.step(`OK: mode ${mode} で text_1.txt を開く`,  () => {
+      const file = text_path.openSync({mode})
+      assertExists(file)
+      file.close()
+    })
+  }) , Promise.resolve())
+
+  await t.step(`OK: {truncate: true} で text_1.txt を開く`, () => {
+    const file = text_path.openSync({mode:"w", truncate:true})
+    assertExists(file)
+    file.close()
+  })
+  
+  await t.step(`Fail-OK: mode "x" ですでに存在する text_1.txt を開くとエラー`,  () => {
+    try {
+      const file = text_path.openSync({mode: "x"})
+      file.close()
+    } catch (error) {
+      assertIsError(error, Error, "already exists.")
+    }
+  })
+  let is_x2__OK = await t.step(`OK: mode "x" で存在しない text_99.txt を指定すると作成してそれを開く`, async () => {
+    const file = not_exist_path.openSync({mode: "x"})
+    assertExists(file)
+    file.close()
+    await Deno.remove(not_exist_path.path)
+  })
+  if (is_x2__OK == false){
+    console.log(`text_99.txt が削除されていない可能性があるので停止`)
+    return
+  }
+
+  is_x2__OK = await t.step(`OK: {create: true} のときは存在しない text_99.txt を作成して開く`, async () => {
+    const file = not_exist_path.openSync({create: true})
+    assertExists(file)
+    file.close()
+    await Deno.remove(not_exist_path.path)
+  })
+  if (is_x2__OK == false){
+    console.log(`text_99.txt が削除されていない可能性があるので停止`)
+    return
+  }
+
+  is_x2__OK = await t.step(`OK: {createNew: true} のときは存在しない text_99.txt を作成して開く`, async () => {
+    const file = not_exist_path.openSync({createNew: true})
+    assertExists(file)
+    file.close()
+    await Deno.remove(not_exist_path.path)
+  })
+  if (is_x2__OK == false){
+    console.log(`text_99.txt が削除されていない可能性があるので停止`)
+    return
+  }
+
+  await t.step(`Fail-OK: {createNew: true} ですでに存在する text_1.txt を開くとエラー`, () => {
+    try {
+      const file = text_path.openSync({createNew: true})
+      file.close()
+    } catch (error) {
+      assertIsError(error, Error, "ファイルがあります")
+    }
+  })
+})
+
+
+Deno.test("メソッド read_byte: バイナリファイルとして読み込む", async () => {
+  const expected = new Uint8Array([100, 101, 110, 111, 95, 112,  97, 116, 104, 108, 105,  98])
+  const actual = await new PathLike("test_data", "data_1", "sample").read_bytes()
+  assertEquals(actual, expected)
+})
+
+
+Deno.test("メソッド read_byteSync: バイナリファイルとして読み込む", () => {
+  const expected = new Uint8Array([100, 101, 110, 111, 95, 112,  97, 116, 104, 108, 105,  98])
+  const actual = new PathLike("test_data", "data_1", "sample").read_bytesSync()
+  assertEquals(actual, expected)
+})
+
+
+Deno.test("メソッド read_text: テキストファイルとして読み込む", async t => {
+  const utf_8 = new PathLike("test_data", "data_1", "text_1.txt")
+  const shift_jis = new PathLike("test_data", "data_1", "shift_jis.txt")
+  const euc_jp = new PathLike("test_data", "data_1", "euc-jp.txt")
+  const expected = "pathlib っぽい挙動をするモジュール"
+
+  await t.step(`OK: 何も指定しない場合は utf-8 で読み込む`, async () => {
+    const actual = await utf_8.read_text()
+    assertEquals(actual, expected)
+  })
+
+  await t.step(`OK: shift_jis で読み込む`, async () => {
+    const actual = await shift_jis.read_text("shift_jis")
+    assertEquals(actual, expected)
+  })
+
+  await t.step(`OK: euc-jp で読み込む`, async () => {
+    const actual = await euc_jp.read_text("euc-jp")
+    assertEquals(actual, expected)
+  })
+})
+
+
+Deno.test("メソッド read_textSync: テキストファイルとして読み込む", async t => {
+  const utf_8 = new PathLike("test_data", "data_1", "text_1.txt")
+  const shift_jis = new PathLike("test_data", "data_1", "shift_jis.txt")
+  const euc_jp = new PathLike("test_data", "data_1", "euc-jp.txt")
+  const expected = "pathlib っぽい挙動をするモジュール"
+
+  await t.step(`OK: 何も指定しない場合は utf-8 で読み込む`, () => {
+    const actual = utf_8.read_textSync()
+    assertEquals(actual, expected)
+  })
+
+  await t.step(`OK: shift_jis で読み込む`,  () => {
+    const actual = shift_jis.read_textSync("shift_jis")
+    assertEquals(actual, expected)
+  })
+
+  await t.step(`OK: euc-jp で読み込む`,  () => {
+    const actual = euc_jp.read_textSync("euc-jp")
+    assertEquals(actual, expected)
+  })
+})
+
+
+Deno.test("メソッド read_link: シンボリックリンクの指すパスを返す", async () => {
+  const actual = await new PathLike("test_data", "data_1", "text_1_link.txt").readlink()
+  assertEquals(actual, "text_1.txt")
+})
+
+
+Deno.test("メソッド rename: リネームして新しいパスのパスオブジェクトを返す", async t => {
+  const before = new PathLike("test_data", "data_1", "before.txt")
+  const after = new PathLike("test_data", "data_1", "after.txt")
+
+  await t.step(`OK: リネームする`, async () => {
+    const renamed = await before.rename(after)
+    assertEquals(renamed.path, after.path)
+    await renamed.rename(before)
+  })
+
+  await t.step(`Fail-OK: リネーム先のパスがすでに存在する場合はエラーを出す`, async () => {
+    try {
+      await before.rename("test_data", "data_1", "text_1.txt")
+    } catch (error) {
+      assertIsError(error, Error, "already exists.")
+    }
+  })
+})
+
+
+Deno.test("メソッド resolve: 絶対パスを返す", async t => {
+  const base_dir = new PathLike(Deno.env.get("gitPath")!, "deno_pathlib")
+  const file = new PathLike("test_data", "data_1", "text_1.txt")
+  const abs = new PathLike(base_dir, file)
+
+  await t.step(`OK: 相対から絶対パスを解決`, () => {
+    assertEquals(file.resolve(), abs.path)
+  })
+
+  await t.step(`Fail-OK: 存在しないパスを解決しようとするとエラー`, () => {
+    const not_exists = new PathLike("test_data", "data_99")
+    try {
+      not_exists.resolve()
+    } catch (error) {
+      assertIsError(error, Error, "指定されたファイルが見つかりません")
+    }
+  })
+})
+
+/* windows でシンボリックリンク作成を行うには、管理者で cmd を立ち上げる必要がある
+
+Deno.test("メソッド symlink: 現在のパスに指定したパスへのシンボリックリンクを作成する", async t => {
+  const link_file_p = new PathLike("test_data", "data_1", "readme_link.txt")
+  const link_to_file = new PathLike("README.txt")
+  const link_dir_p = new PathLike("test_data", "data_1", "data_2_2_link")
+  const link_to_dir = new PathLike("test_data", "data_2", "data_2_2")
+
+  await t.step(`OK: {type: "file"} を指定してファイルへのシンボリックリンクを作成する`, async () => {
+    try {
+      await link_file_p.symlink(link_to_file, "file")
+      await link_file_p.remove()
+      throw new Error("Not Error")
+    } catch (error) {
+      assertIsError(error, Error, "Not Error")
+    }
+  })
+
+  await t.step(`OK: {type: "dir"} を指定してディレクトリへのシンボリックリンクを作成する`, async () => {
+    try {
+      await link_dir_p.symlink(link_to_dir, "dir")
+      await link_dir_p.remove()
+      throw new Error("Not Error")
+    } catch (error) {
+      assertIsError(error, Error, "Not Error")
+    }
+  })
+})
+
+
+Deno.test("メソッド symlinkSync: 現在のパスに指定したパスへのシンボリックリンクを作成する", async t => {
+  const link_file_p = new PathLike("test_data", "data_1", "readme_link.txt")
+  const link_to_file = new PathLike("README.txt")
+  const link_dir_p = new PathLike("test_data", "data_1", "data_2_2_link")
+  const link_to_dir = new PathLike("test_data", "data_2", "data_2_2")
+
+  await t.step(`OK: {type: "file"} を指定してファイルへのシンボリックリンクを作成する`, () => {
+    try {
+      link_file_p.symlinkSync(link_to_file, "file")
+      link_file_p.removeSync()
+      throw new Error("Not Error")
+    } catch (error) {
+      assertIsError(error, Error, "Not Error")
+    }
+  })
+
+  await t.step(`OK: {type: "dir"} を指定してディレクトリへのシンボリックリンクを作成する`, () => {
+    try {
+      link_dir_p.symlinkSync(link_to_dir, "dir")
+      link_dir_p.removeSync()
+      throw new Error("Not Error")
+    } catch (error) {
+      assertIsError(error, Error, "Not Error")
+    }
+  })
+})
+*/
+
+
+Deno.test("メソッド touch: 現在のパスに空ファイルを作成する", async t => {
+  const to_touch = new PathLike("test_data", "data_1", "touched.txt")
+
+  await t.step(`OK: ファイル作成`, async () => {
+    try {
+      await to_touch.touch()
+      await to_touch.remove()
+      throw new Error("Not Error")
+    } catch (error) {
+      assertIsError(error, Error, "Not Error")
+    }
+  })
+
+  await t.step(`OK: exist_ok を指定しない場合、すでにファイルが存在していれば何もしない`, async () => {
+    try {
+      await to_touch.touch()
+      await to_touch.touch()
+      await to_touch.remove()
+      throw new Error("Not Error")
+    } catch (error) {
+      assertIsError(error, Error, "Not Error")
+    }
+  })
+
+  await t.step(`Fail-OK: exist_ok = false の場合、すでにファイルが存在していればエラー`, async () => {
+    try {
+      await to_touch.touch()
+      await to_touch.touch({exist_ok:false})
+    } catch (error) {
+      assertIsError(error, Error, "already exists.")
+      await to_touch.remove()
+    }
+  })
+})
+
+
+Deno.test("メソッド touchSync: 現在のパスに空ファイルを作成する", async t => {
+  const to_touch = new PathLike("test_data", "data_1", "touched.txt")
+
+  await t.step(`OK: ファイル作成`, () => {
+    try {
+      to_touch.touchSync()
+      to_touch.removeSync()
+      throw new Error("Not Error")
+    } catch (error) {
+      assertIsError(error, Error, "Not Error")
+    }
+  })
+
+  await t.step(`OK: exist_ok を指定しない場合、すでにファイルが存在していれば何もしない`, () => {
+    try {
+      to_touch.touchSync()
+      to_touch.touchSync()
+      to_touch.removeSync()
+      throw new Error("Not Error")
+    } catch (error) {
+      assertIsError(error, Error, "Not Error")
+    }
+  })
+
+  await t.step(`Fail-OK: exist_ok = false の場合、すでにファイルが存在していればエラー`, () => {
+    try {
+      to_touch.touchSync()
+      to_touch.touchSync({exist_ok:false})
+    } catch (error) {
+      assertIsError(error, Error, "already exists.")
+      to_touch.removeSync()
+    }
+  })
+})
+
+
+Deno.test("メソッド write_byte: バイナリデータをファイルに書き込む", async t => {
+  const expected = new Uint8Array([100, 101, 110, 111, 95, 112,  97, 116, 104, 108, 105,  98])
+  const to_create = new PathLike("test_data", "data_1", "created")
+
+  await t.step(`OK: 存在しない場合はファイルを作成`, async () => {
+    await to_create.write_bytes(expected)
+    const actual = await to_create.read_bytes()
+    assertEquals(actual, expected)
+    await to_create.remove()
+  })
+
+  await t.step(`Fail-OK: create = false の場合は存在しないファイルならエラー`, async () => {
+    try {
+      await to_create.write_bytes(expected, {create:false})  
+    } catch (error) {
+      assertIsError(error, Error, "指定されたファイルが見つかりません")
+    }
+  })
+  
+  await t.step(`OK: mode = "a" の場合は既存ファイルに内容を追加`, async () => {
+    await to_create.write_bytes(expected.slice(0, 7))
+    await to_create.write_bytes(expected.slice(7), {mode:"a"})
+    const actual = await to_create.read_bytes()
+    assertEquals(actual, expected)
+    await to_create.remove()
+  })
+  
+  await t.step(`Fail-OK: mode = "x" で既存ファイルにアクセスした場合はエラー`, async () => {
+    await to_create.write_bytes(expected.slice(0, 7))
+    try {
+      await to_create.write_bytes(expected.slice(7), {mode:"x"})
+    } catch (error) {
+      assertIsError(error, Error, "already exists.")
+      await to_create.remove()
+    }
+  })
+})
+
+
+Deno.test("メソッド write_byteSync: バイナリデータをファイルに書き込む", async t => {
+  const expected = new Uint8Array([100, 101, 110, 111, 95, 112,  97, 116, 104, 108, 105,  98])
+  const to_create = new PathLike("test_data", "data_1", "created")
+
+  await t.step(`OK: 存在しない場合はファイルを作成`, () => {
+    to_create.write_bytesSync(expected)
+    const actual = to_create.read_bytesSync()
+    assertEquals(actual, expected)
+    to_create.removeSync()
+  })
+
+  await t.step(`Fail-OK: create = false の場合は存在しないファイルならエラー`, () => {
+    try {
+      to_create.write_bytesSync(expected, {create:false})  
+    } catch (error) {
+      assertIsError(error, Error, "指定されたファイルが見つかりません")
+    }
+  })
+  
+  await t.step(`OK: mode = "a" の場合は既存ファイルに内容を追加`, () => {
+    to_create.write_bytesSync(expected.slice(0, 7))
+    to_create.write_bytesSync(expected.slice(7), {mode:"a"})
+    const actual = to_create.read_bytesSync()
+    assertEquals(actual, expected)
+    to_create.removeSync()
+  })
+  
+  await t.step(`Fail-OK: mode = "x" で既存ファイルにアクセスした場合はエラー`, () => {
+    to_create.write_bytesSync(expected.slice(0, 7))
+    try {
+      to_create.write_bytesSync(expected.slice(7), {mode:"x"})
+    } catch (error) {
+      assertIsError(error, Error, "already exists.")
+      to_create.removeSync()
+    }
+  })
+})
+
+
+Deno.test("メソッド write_text: テキストをファイルに書き込む", async t => {
+  const to_create = new PathLike("test_data", "data_1", "created.txt")
+  const expected = "pathlib っぽい挙動をするモジュール"
+
+  await t.step(`OK: 存在しない場合はファイルを作成`, async () => {
+    await to_create.write_text(expected)
+    const actual = await to_create.read_text()
+    assertEquals(actual, expected)
+    await to_create.remove()
+  })
+
+  await t.step(`Fail-OK: create = false の場合は存在しないファイルならエラー`, async () => {
+    try {
+      await to_create.write_text(expected, {create:false})  
+    } catch (error) {
+      assertIsError(error, Error, "指定されたファイルが見つかりません")
+    }
+  })
+  
+  await t.step(`OK: mode = "a" の場合は既存ファイルに内容を追加`, async () => {
+    await to_create.write_text(expected.slice(0, 7))
+    await to_create.write_text(expected.slice(7), {mode:"a"})
+    const actual = await to_create.read_text()
+    assertEquals(actual, expected)
+    await to_create.remove()
+  })
+  
+  await t.step(`Fail-OK: mode = "x" で既存ファイルにアクセスした場合はエラー`, async () => {
+    await to_create.write_text(expected.slice(0, 7))
+    try {
+      await to_create.write_text(expected.slice(7), {mode:"x"})
+    } catch (error) {
+      assertIsError(error, Error, "already exists.")
+      await to_create.remove()
+    }
+  })
+})
+
+
+Deno.test("メソッド write_textSync: テキストをファイルに書き込む", async t => {
+  const to_create = new PathLike("test_data", "data_1", "created.txt")
+  const expected = "pathlib っぽい挙動をするモジュール"
+
+  await t.step(`OK: 存在しない場合はファイルを作成`, () => {
+     to_create.write_textSync(expected)
+    const actual =  to_create.read_textSync()
+    assertEquals(actual, expected)
+    to_create.removeSync()
+  })
+
+  await t.step(`Fail-OK: create = false の場合は存在しないファイルならエラー`, () => {
+    try {
+      to_create.write_textSync(expected, {create:false})  
+    } catch (error) {
+      assertIsError(error, Error, "指定されたファイルが見つかりません")
+    }
+  })
+  
+  await t.step(`OK: mode = "a" の場合は既存ファイルに内容を追加`, () => {
+    to_create.write_textSync(expected.slice(0, 7))
+    to_create.write_textSync(expected.slice(7), {mode:"a"})
+    const actual = to_create.read_textSync()
+    assertEquals(actual, expected)
+    to_create.remove()
+  })
+  
+  await t.step(`Fail-OK: mode = "x" で既存ファイルにアクセスした場合はエラー`, () => {
+    to_create.write_textSync(expected.slice(0, 7))
+    try {
+      to_create.write_textSync(expected.slice(7), {mode:"x"})
+    } catch (error) {
+      assertIsError(error, Error, "already exists.")
+      to_create.removeSync()
+    }
+  })
 })
