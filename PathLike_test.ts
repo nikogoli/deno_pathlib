@@ -1,7 +1,7 @@
 import { assertEquals, assertIsError, assertNotEquals, assertExists,  } from "https://deno.land/std@0.170.0/testing/asserts.ts"
 import * as DenoFS from "https://deno.land/std@0.177.0/fs/mod.ts"
 
-import { PurePathLike, PathLike } from "./PurePathLike.ts"
+import { PurePathLike, PathLike } from "./PathLike.ts"
 
 
 const Absolute = {
@@ -561,7 +561,7 @@ Deno.test("メソッド is_dir: ディレクトリかどうかを判定", async 
   const file_p = new PathLike(base_dir, "text_1.txt")
   const file_link_p = new PathLike(base_dir, "text_1_link.txt")
 
-  await [{p:dir_p, b:true}, {p:dir_link_p, b:true}, {p:file_p, b:false}, {p:file_link_p, b:false}]
+  await [{p:dir_p, b:true}, {p:dir_link_p, b:false}, {p:file_p, b:false}, {p:file_link_p, b:false}]
     .reduce((pre, {p, b}) => pre.then(async () => {
         await t.step(`OK: ${p.name} では is_dir = ${b}`, () => {
           assertEquals(p.is_dir(), b)
@@ -578,7 +578,7 @@ Deno.test("メソッド is_file: ファイルかどうかを判定", async t => 
   const file_p = new PathLike(base_dir, "text_1.txt")
   const file_link_p = new PathLike(base_dir, "text_1_link.txt")
 
-  await [{p:dir_p, b:false}, {p:dir_link_p, b:false}, {p:file_p, b:true}, {p:file_link_p, b:true}]
+  await [{p:dir_p, b:false}, {p:dir_link_p, b:false}, {p:file_p, b:true}, {p:file_link_p, b:false}]
     .reduce((pre, {p, b}) => pre.then(async () => {
         await t.step(`OK: ${p.name} では is_file = ${b}`, () => {
           assertEquals(p.is_file(), b)
@@ -673,24 +673,24 @@ Deno.test("メソッド mkdir: 指定したパスにディレクトリ作成", a
 
 
 Deno.test("メソッド open: ファイルを開いて Deno.FsFile を返す", async t => {
-  const text_path = new PathLike("test_data", "data_1", "text_1.txt")
+  const text_path = new PathLike("test_data", "data_1", "before.txt")
   const not_exist_path = new PathLike("test_data", "data_1", "text_99.txt")
 
   await (["w", "r", "a"] as const).reduce( (pre, mode) => pre.then(async () => {
-    await t.step(`OK: mode ${mode} で text_1.txt を開く`, async () => {
+    await t.step(`OK: mode ${mode} で開く`, async () => {
       const file = await text_path.open({mode})
       assertExists(file)
       file.close()
     })
   }) , Promise.resolve())
 
-  await t.step(`OK: {truncate: true} で text_1.txt を開く`, async () => {
+  await t.step(`OK: {truncate: true} で開く`, async () => {
     const file = await text_path.open({mode:"w", truncate:true})
     assertExists(file)
     file.close()
   })
   
-  await t.step(`Fail-OK: mode "x" ですでに存在する text_1.txt を開くとエラー`, async () => {
+  await t.step(`Fail-OK: mode "x" ですでに存在するファイルを開くとエラー`, async () => {
     try {
       const file = await text_path.open({mode: "x"})
       file.close()
@@ -699,7 +699,7 @@ Deno.test("メソッド open: ファイルを開いて Deno.FsFile を返す", a
     }
   })
 
-  let is_x2__OK = await t.step(`OK: mode "x" で存在しない text_99.txt を指定すると作成してそれを開く`, async () => {
+  let is_x2__OK = await t.step(`OK: mode "x" で存在しないファイルを指定すると作成してそれを開く`, async () => {
     const file = await not_exist_path.open({mode: "x"})
     assertExists(file)
     file.close()
@@ -744,24 +744,24 @@ Deno.test("メソッド open: ファイルを開いて Deno.FsFile を返す", a
 
 
 Deno.test("メソッド openSync: ファイルを開いて Deno.FsFile を返す", async t => {
-  const text_path = new PathLike("test_data", "data_1", "text_1.txt")
+  const text_path = new PathLike("test_data", "data_1", "before.txt")
   const not_exist_path = new PathLike("test_data", "data_1", "text_99.txt")
 
   await (["w", "r", "a"] as const).reduce( (pre, mode) => pre.then(async () => {
-    await t.step(`OK: mode ${mode} で text_1.txt を開く`,  () => {
+    await t.step(`OK: mode ${mode} でファイルを開いてを開く`,  () => {
       const file = text_path.openSync({mode})
       assertExists(file)
       file.close()
     })
   }) , Promise.resolve())
 
-  await t.step(`OK: {truncate: true} で text_1.txt を開く`, () => {
+  await t.step(`OK: {truncate: true} でファイルを開く`, () => {
     const file = text_path.openSync({mode:"w", truncate:true})
     assertExists(file)
     file.close()
   })
   
-  await t.step(`Fail-OK: mode "x" ですでに存在する text_1.txt を開くとエラー`,  () => {
+  await t.step(`Fail-OK: mode "x" ですでに存在するファイルを開くとエラー`,  () => {
     try {
       const file = text_path.openSync({mode: "x"})
       file.close()
@@ -769,7 +769,7 @@ Deno.test("メソッド openSync: ファイルを開いて Deno.FsFile を返す
       assertIsError(error, Error, "already exists.")
     }
   })
-  let is_x2__OK = await t.step(`OK: mode "x" で存在しない text_99.txt を指定すると作成してそれを開く`, async () => {
+  let is_x2__OK = await t.step(`OK: mode "x" で存在しないファイルを指定すると作成してそれを開く`, async () => {
     const file = not_exist_path.openSync({mode: "x"})
     assertExists(file)
     file.close()
@@ -780,7 +780,7 @@ Deno.test("メソッド openSync: ファイルを開いて Deno.FsFile を返す
     return
   }
 
-  is_x2__OK = await t.step(`OK: {create: true} のときは存在しない text_99.txt を作成して開く`, async () => {
+  is_x2__OK = await t.step(`OK: {create: true} のときは存在しないファイルを作成して開く`, async () => {
     const file = not_exist_path.openSync({create: true})
     assertExists(file)
     file.close()
@@ -791,7 +791,7 @@ Deno.test("メソッド openSync: ファイルを開いて Deno.FsFile を返す
     return
   }
 
-  is_x2__OK = await t.step(`OK: {createNew: true} のときは存在しない text_99.txt を作成して開く`, async () => {
+  is_x2__OK = await t.step(`OK: {createNew: true} のときは存在しないファイルを作成して開く`, async () => {
     const file = not_exist_path.openSync({createNew: true})
     assertExists(file)
     file.close()
@@ -802,7 +802,7 @@ Deno.test("メソッド openSync: ファイルを開いて Deno.FsFile を返す
     return
   }
 
-  await t.step(`Fail-OK: {createNew: true} ですでに存在する text_1.txt を開くとエラー`, () => {
+  await t.step(`Fail-OK: {createNew: true} ですでに存在するファイルを開くとエラー`, () => {
     try {
       const file = text_path.openSync({createNew: true})
       file.close()
