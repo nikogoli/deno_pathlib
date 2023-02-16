@@ -444,6 +444,20 @@ export class PathLike extends PurePathLike {
     }
   }
 
+  async read_lines(length?: number, encoding?: "utf-8" | string) {
+    const text = await this.read_text(encoding)
+    const eol = DenoFS.detect(text) ?? (DenoPath.sep == "\\") ? DenoFS.EOL.CRLF : DenoFS.EOL.LF
+    const lines = text.split(eol)
+    return (length) ? lines.slice(0, length) : lines
+  }
+
+  read_linesSync(length?: number, encoding?: "utf-8" | string) {
+    const text = this.read_textSync(encoding)
+    const eol = DenoFS.detect(text) ?? (DenoPath.sep == "\\") ? DenoFS.EOL.CRLF : DenoFS.EOL.LF
+    const lines = text.split(eol)
+    return (length) ? lines.slice(0, length) : lines
+  }
+
   async read_JSON() {
     return await Deno.readTextFile(this.path).then(tx => JSON.parse(tx))
   }
