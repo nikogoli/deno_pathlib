@@ -448,6 +448,11 @@ export class PathLike extends PurePathLike {
     return await Deno.readTextFile(this.path).then(tx => JSON.parse(tx))
   }
 
+  read_JSONSync() {
+    const j = Deno.readTextFileSync(this.path)
+    return JSON.parse(j)
+  }
+
   async readlink() {
     return await Deno.readLink(this.path)
   }
