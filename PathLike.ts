@@ -4,6 +4,10 @@ import * as DenoFS from "https://deno.land/std@0.177.0/fs/mod.ts"
 
 type NotPromise<T> = T extends Promise<any> ? never : T
 
+type DistMerge<
+  T extends Record<string,unknown>,
+  S extends Record<string,unknown>
+> = S extends any ? { [K in keyof (T&S)]: (T&S)[K] } : never
 
 export class PurePathLike {
   path = ""
@@ -440,6 +444,10 @@ export class PathLike extends PurePathLike {
     }
   }
 
+  async read_JSON() {
+    return await Deno.readTextFile(this.path).then(tx => JSON.parse(tx))
+  }
+
   async readlink() {
     return await Deno.readLink(this.path)
   }
@@ -598,14 +606,14 @@ export class PathLike extends PurePathLike {
   async write_text(
     data: string,
     option?: {
-      mode? : "x" | "a",
+      mode? : "x" | "a"
       create?: false,
       createNew?: true,
       PermissionMode?: number,
     }
   ) {
-    if (option && option.mode == "x"){
-      const is_exist = await this.exists()
+    if (option?.mode == "x"){
+      const is_exist = this.existsSync()
       if (is_exist){
         throw new Error(`path ${this.path} is already exists.`)
       }
@@ -619,16 +627,32 @@ export class PathLike extends PurePathLike {
     await Deno.writeTextFile(this.path, data, opt)
   }
 
+  async write_JSON(
+    data: Record<string, unknown>,
+    option?: {
+      mode? : "x" | "a"
+      create?: false,
+      createNew?: true,
+      PermissionMode?: number,
+      repalcer?: (this: any, key: string, value: any) => any
+      space?: string | number
+    }
+  ) {
+    const { repalcer, space } = option ? option : {repalcer: undefined, space:undefined}
+    const j_data = JSON.stringify(data, repalcer, space)
+    await this.write_text(j_data, option)
+  }
+
   write_textSync(
     data: string,
-    option?:{
-      mode? : "x" | "a",
+    option?: {
+      mode? : "x" | "a"
       create?: false,
       createNew?: true,
       PermissionMode?: number,
     }
   ) {
-    if (option && option.mode == "x"){
+    if (option?.mode == "x"){
       const is_exist = this.existsSync()
       if (is_exist){
         throw new Error(`path ${this.path} is already exists.`)
@@ -641,6 +665,22 @@ export class PathLike extends PurePathLike {
       mode: option?.PermissionMode
     }
     Deno.writeTextFileSync(this.path, data, opt)
+  }
+
+  write_JSONSync(
+    data: Record<string, unknown>,
+    option?: {
+      mode? : "x" | "a"
+      create?: false,
+      createNew?: true,
+      PermissionMode?: number,
+      repalcer?: (this: any, key: string, value: any) => any
+      space?: string | number
+    }
+  ) {
+    const { repalcer, space } = option ? option : {repalcer: undefined, space:undefined}
+    const j_data = JSON.stringify(data, repalcer, space)
+    this.write_textSync(j_data, option)
   }
 
   #set_info(is_d:boolean, is_f:boolean, is_s:boolean){
