@@ -46,7 +46,8 @@ export class PurePathLike {
         ? [args[0]+args[1], ...args.slice(2)]
         : args  // ["C:","Users","Default"] → OK:"C:Users/Default",  NOT："C:/Users/Default"
     const joined = DenoPath.join(...reviesed)
-    this.path = joined.length > 1 && joined.endsWith(".") ? joined.slice(0, -1) : joined
+    const raw_path = joined.length > 1 && joined.endsWith(".") ? joined.slice(0, -1) : joined
+    this.path = (raw_path.startsWith("file:")) ? DenoPath.fromFileUrl(raw_path) : raw_path
     //console.log(this.path)
 
     if (this.path == "\\" || this.path == "/"){
