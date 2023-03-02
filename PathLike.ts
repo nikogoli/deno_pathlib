@@ -314,6 +314,72 @@ export class PathLike extends PurePathLike {
     return outputs
   }
 
+  async iterdirFind (
+    callbackSyncFunc: (value: PathLike, index?:number) => boolean,
+    type: "file" | "dir" | "both" = "file"
+  ) {
+    let found: PathLike | undefined = undefined
+    let i = 0
+    for await (const entry of this.iterdir()){
+      if (found === undefined){
+        const { isDirectory, isFile, isSymlink } = entry
+        if ( (type == "both" && isSymlink == false) ||
+              (type == "file" && isFile) ||
+              (type == "dir" && isDirectory)
+        ){
+          const p = this.joinpath(entry.name)
+          p.#set_info(isDirectory, isFile, isSymlink)
+          if (callbackSyncFunc(p, i++)){
+            found = p
+          }
+        }
+      }
+    }
+    return found
+  }
+
+  async iterdirSome (
+    callbackSyncFunc: (value: PathLike, index?:number) => boolean,
+    type: "file" | "dir" | "both" = "file"
+  ) {
+    let is_hit = false
+    let i = 0
+    for await (const entry of this.iterdir()){
+      const { isDirectory, isFile, isSymlink } = entry
+      if ( (type == "both" && isSymlink == false) ||
+            (type == "file" && isFile) ||
+            (type == "dir" && isDirectory)
+      ){
+        const p = this.joinpath(entry.name)
+        p.#set_info(isDirectory, isFile, isSymlink)
+        is_hit = callbackSyncFunc(p, i++)
+      }
+    }
+    return is_hit
+  }
+
+  async iterdirEvery (
+    callbackSyncFunc: (value: PathLike, index?:number) => boolean,
+    type: "file" | "dir" | "both" = "file"
+  ) {
+    let all_is_true = true
+    let i = 0
+    for await (const entry of this.iterdir()){
+      const { isDirectory, isFile, isSymlink } = entry
+      if ( (type == "both" && isSymlink == false) ||
+            (type == "file" && isFile) ||
+            (type == "dir" && isDirectory)
+      ){
+        const p = this.joinpath(entry.name)
+        p.#set_info(isDirectory, isFile, isSymlink)
+        if (callbackSyncFunc(p, i++) == false){
+          all_is_true = false
+        }
+      }
+    }
+    return all_is_true
+  }
+
   statSync() {
     return Deno.statSync(this.path)
   }

@@ -1,4 +1,4 @@
-import { assertEquals, assertIsError, assertNotEquals, assertExists,  } from "https://deno.land/std@0.170.0/testing/asserts.ts"
+import { assertEquals, assertIsError, assertNotEquals, assertExists, assertInstanceOf  } from "https://deno.land/std@0.170.0/testing/asserts.ts"
 import * as DenoFS from "https://deno.land/std@0.177.0/fs/mod.ts"
 
 import { PurePathLike, PathLike } from "./PathLike.ts"
@@ -635,6 +635,115 @@ Deno.test("メソッド iterdirMap: iterdir() の返り値に対して Array.map
   await t.step("OK: 同期のコールバック", async () => {
     const actual = await p.iterdirMap( p =>  p.name).then(lis => lis.sort())
   assertEquals(actual, expected)
+  })
+})
+
+
+Deno.test("メソッド iterdirFind: iterdir() の返り値に対して Array.find() のような処理を行う ", async t => {
+  const dir_p = new PathLike("test_data", "data_1")
+  
+  await t.step("OK: [ファイル] true になるパスがあれば PathLike を返す", async () => {
+    const found = await dir_p.iterdirFind((p:PathLike) => p.name == "text_1.txt")
+    assertInstanceOf(found, PathLike)
+  })
+
+  await t.step("fail-OK: [ファイル] true になるパスがなければ undefined を返す", async ()=>{
+    const found = await dir_p.iterdirFind((p:PathLike) => p.name == "text_99.txt")
+    assertEquals(found, undefined)
+  })
+
+  await t.step("OK: [ディレクトリ] true になるパスがあれば PathLike を返す", async () => {
+    const found = await dir_p.iterdirFind((p:PathLike) => p.name == "data_1_1", "dir")
+    assertInstanceOf(found, PathLike)
+  })
+
+  await t.step("fail-OK: [ディレクトリ] true になるパスがなければ undefined を返す", async ()=>{
+    const found = await dir_p.iterdirFind((p:PathLike) => p.name == "data_1_99", "dir")
+    assertEquals(found, undefined)
+  })
+
+  await t.step("OK: [both] true になるパスがあれば PathLike を返す", async () => {
+    const found = await dir_p.iterdirFind((p:PathLike) => ["data_1_1", "text_1.txt"].includes(p.name), "both")
+    assertInstanceOf(found, PathLike)
+  })
+
+  await t.step("fail-OK: [both] true になるパスがなければ undefined を返す", async ()=>{
+    const found = await dir_p.iterdirFind((p:PathLike) => ["data_1_99", "text_99.txt"].includes(p.name), "both")
+    assertEquals(found, undefined)
+  })
+})
+
+
+Deno.test("メソッド iterdirSome: iterdir() の返り値に対して Array.some() のような処理を行う ", async t => {
+  const dir_p = new PathLike("test_data", "data_1")
+  
+  await t.step("OK: [ファイル] true になるパスがあれば true を返す", async () => {
+    const is_some_true = await dir_p.iterdirSome((p:PathLike) => p.name.includes("text"))
+    assertEquals(is_some_true, true)
+  })
+
+  await t.step("fail-OK: [ファイル] true になるパスがなければ false を返す", async ()=>{
+    const is_some_true = await dir_p.iterdirSome((p:PathLike) => p.name.includes("_______"))
+    assertEquals(is_some_true, false)
+  })
+
+  await t.step("OK: [ディレクトリ] true になるパスがあれば PathLike を返す", async () => {
+    const is_some_true = await dir_p.iterdirSome((p:PathLike) => p.name.includes("data"), "dir")
+    assertEquals(is_some_true, true)
+  })
+
+  await t.step("fail-OK: [ディレクトリ] true になるパスがなければ undefined を返す", async ()=>{
+    const is_some_true = await dir_p.iterdirSome((p:PathLike) => p.name.includes("_______"), "dir")
+    assertEquals(is_some_true, false)
+  })
+
+  await t.step("OK: [both] true になるパスがあれば PathLike を返す", async () => {
+    const is_some_true = await dir_p.iterdirSome(
+      (p:PathLike) => p.name.startsWith("data") || p.name.startsWith("text"), "both")
+    assertEquals(is_some_true, true)
+  })
+
+  await t.step("fail-OK: [both] true になるパスがなければ undefined を返す", async ()=>{
+    const is_some_true = await dir_p.iterdirSome(
+      (p:PathLike) => p.name.startsWith("__data") || p.name.startsWith("__text"), "both")
+    assertEquals(is_some_true, false)
+  })
+})
+
+
+Deno.test("メソッド iterdirEvery: iterdir() の返り値に対して Array.every() のような処理を行う ", async t => {
+  const dir_p = new PathLike("test_data", "data_1")
+  
+  await t.step("OK: [ファイル] 全てのパスで true ならば true を返す", async () => {
+    const is_some_true = await dir_p.iterdirEvery((p:PathLike) => p.name=="sample" || (p.suffix==".txt"))
+    assertEquals(is_some_true, true)
+  })
+
+  await t.step("fail-OK: [ファイル] いずれかのパスで false になれば false を返す", async ()=>{
+    const is_some_true = await dir_p.iterdirEvery((p:PathLike) => p.suffix == ".txt")
+    assertEquals(is_some_true, false)
+  })
+
+  await t.step("OK: [ディレクトリ] 全てのパスで true ならば PathLike を返す", async () => {
+    const is_some_true = await dir_p.iterdirEvery((p:PathLike) => p.name.startsWith("data_1"), "dir")
+    assertEquals(is_some_true, true)
+  })
+
+  await t.step("fail-OK: [ディレクトリ] いずれかのパスで false になれば false を返す", async ()=>{
+    const is_some_true = await dir_p.iterdirEvery((p:PathLike) => p.name.endsWith("2"), "dir")
+    assertEquals(is_some_true, false)
+  })
+
+  await t.step("OK: [both] 全てのパスで true ならば PathLike を返す", async () => {
+    const is_some_true = await dir_p.iterdirEvery(
+      (p:PathLike) => p.name=="sample" || p.name.includes("1") || p.suffix == ".txt", "both")
+    assertEquals(is_some_true, true)
+  })
+
+  await t.step("fail-OK: [both] いずれかのパスで false になれば false を返す", async ()=>{
+    const is_some_true = await dir_p.iterdirEvery(
+      (p:PathLike) => p.name=="sample" || p.name.includes("1"), "both")
+    assertEquals(is_some_true, false)
   })
 })
 
