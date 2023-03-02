@@ -619,27 +619,23 @@ Deno.test("メソッド iterdir: DenoFS.walk(this.path, {maxDepth: 1, ...options
 })
 
 
-Deno.test("メソッド iterdirMap: iterdir() の返り値に対して .map() のように非同期処理を適用する", async () => {
+Deno.test("メソッド iterdirMap: iterdir() の返り値に対して Array.map() のような逐次処理を適用する", async t => {
   const p = new PathLike("test_data", "data_1")
   const expected = [
     "data_1_1", , "before.txt", "euc-jp.txt", "data_1_1_link",
     "sample", "shift_jis.txt", "text_1.txt", "text_1_link.txt"
   ].sort()
-  const actual = await p.iterdirMap(async p => await Promise.resolve().then(() => p.name))
-      .then(lis => lis.sort())
+
+  await t.step("OK: 非同期のコールバック", async () => {
+    const actual = await p.iterdirMap(async p => await Promise.resolve().then(() => p.name))
+    .then(lis => lis.sort())
+    assertEquals(actual, expected)
+  })
+
+  await t.step("OK: 同期のコールバック", async () => {
+    const actual = await p.iterdirMap( p =>  p.name).then(lis => lis.sort())
   assertEquals(actual, expected)
-})
-
-
-
-Deno.test("メソッド iterdirMapSync: iterdir() の返り値に対して .map() のように同期処理を適用する", async () => {
-  const p = new PathLike("test_data", "data_1")
-  const expected = [
-    "data_1_1", , "before.txt", "euc-jp.txt", "data_1_1_link",
-    "sample", "shift_jis.txt", "text_1.txt",  "text_1_link.txt"
-  ].sort()
-  const actual = await p.iterdirMapSync( p =>  p.name).then(lis => lis.sort())
-  assertEquals(actual, expected)
+  })
 })
 
 

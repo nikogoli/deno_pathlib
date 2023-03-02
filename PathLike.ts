@@ -1,7 +1,6 @@
 import * as DenoPath from "https://deno.land/std@0.170.0/path/mod.ts"
 import * as DenoFS from "https://deno.land/std@0.177.0/fs/mod.ts"
 
-
 type NotPromise<T> = T extends Promise<any> ? never : T
 
 type DistMerge<
@@ -302,7 +301,7 @@ export class PathLike extends PurePathLike {
   }
 
   async iterdirMap<T>(
-    callbackAsyncFunc: (value: PathLike, index: number) => Promise<T>,
+    callbackAsyncFunc: (value: PathLike, index: number) => NotPromise<T> | Promise<T>,
   ): Promise<Array<T>> {
     const outputs: Array<T> = []
     let i = 0
@@ -311,21 +310,6 @@ export class PathLike extends PurePathLike {
       const { isDirectory, isFile, isSymlink } = entry
       p.#set_info(isDirectory, isFile, isSymlink)
       outputs.push( await callbackAsyncFunc(p, i++) )
-    }
-    return outputs
-  }
-
-
-  async iterdirMapSync<T>(
-    callbackSyncFunc: (value: PathLike, index: number) => NotPromise<T>,
-  ): Promise<Array<NotPromise<T>>> {
-    const outputs: Array<NotPromise<T>> = []
-    let i = 0
-    for await (const entry of this.iterdir()){
-      const p = this.joinpath(entry.name)
-      const { isDirectory, isFile, isSymlink } = entry
-      p.#set_info(isDirectory, isFile, isSymlink)
-      outputs.push(callbackSyncFunc(p, i++))
     }
     return outputs
   }
