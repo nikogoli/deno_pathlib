@@ -623,7 +623,7 @@ Deno.test("メソッド iterdirMap: iterdir() の返り値に対して Array.map
   const p = new PathLike("test_data", "data_1")
   const expected = [
     "data_1_1", , "before.txt", "euc-jp.txt", "data_1_1_link",
-    "sample", "shift_jis.txt", "text_1.txt", "text_1_link.txt"
+    "sample", "shift_jis.txt", "text_1.txt", "text_1_link.txt", "object.json"
   ].sort()
 
   await t.step("OK: 非同期のコールバック", async () => {
@@ -715,7 +715,8 @@ Deno.test("メソッド iterdirEvery: iterdir() の返り値に対して Array.e
   const dir_p = new PathLike("test_data", "data_1")
   
   await t.step("OK: [ファイル] 全てのパスで true ならば true を返す", async () => {
-    const is_some_true = await dir_p.iterdirEvery((p:PathLike) => p.name=="sample" || (p.suffix==".txt"))
+    const is_some_true = await dir_p.iterdirEvery(
+      (p:PathLike) => p.name=="sample" || p.suffix==".txt" || p.suffix == ".json")
     assertEquals(is_some_true, true)
   })
 
@@ -736,7 +737,7 @@ Deno.test("メソッド iterdirEvery: iterdir() の返り値に対して Array.e
 
   await t.step("OK: [both] 全てのパスで true ならば PathLike を返す", async () => {
     const is_some_true = await dir_p.iterdirEvery(
-      (p:PathLike) => p.name=="sample" || p.name.includes("1") || p.suffix == ".txt", "both")
+      (p:PathLike) => p.name=="sample" || p.name.includes("1") || p.suffix == ".txt" || p.suffix == ".json", "both")
     assertEquals(is_some_true, true)
   })
 
@@ -929,6 +930,66 @@ Deno.test("メソッド read_byteSync: バイナリファイルとして読み�
   const expected = new Uint8Array([100, 101, 110, 111, 95, 112,  97, 116, 104, 108, 105,  98])
   const actual = new PathLike("test_data", "data_1", "sample").read_bytesSync()
   assertEquals(actual, expected)
+})
+
+
+Deno.test("メソッド read_lines: テキストファイルを読み込み改行で分割した array を返す", async t => {
+  const file_p = new PathLike("test_data", "data_1", "object.json")
+  const expected = [
+    '{', '  "bool": true,', '  "short array": [1, 2, 3],', '  "long array": [',
+    '    {"x": 1, "y": 2},', '    {"x": 2, "y": 1},', '    {"x": 1, "y": 1},',
+    '    {"x": 2, "y": 2}', '  ]', '}']
+  
+  await t.step("OK: 配列として読み込む", async () => {
+    const actual = await file_p.read_lines()
+    assertEquals(expected, actual)
+  })
+
+  await t.step("OK: 配列の長さを指定して読み込む", async () => {
+    const actual = await file_p.read_lines(5)
+    assertEquals(actual.length, 5)
+  })
+
+  // 改行コードの違いにも対応できることのテスト ....
+})
+
+
+Deno.test("メソッド read_linesSync: テキストファイルを読み込み改行で分割した array を返す", async t => {
+  const file_p = new PathLike("test_data", "data_1", "object.json")
+  const expected = [
+    '{', '  "bool": true,', '  "short array": [1, 2, 3],', '  "long array": [',
+    '    {"x": 1, "y": 2},', '    {"x": 2, "y": 1},', '    {"x": 1, "y": 1},',
+    '    {"x": 2, "y": 2}', '  ]', '}']
+  
+  await t.step("OK: 配列として読み込む", () => {
+    const actual = file_p.read_linesSync()
+    assertEquals(expected, actual)
+  })
+
+  await t.step("OK: 配列の長さを指定して読み込む", () => {
+    const actual = file_p.read_linesSync(5)
+    assertEquals(actual.length, 5)
+  })
+
+  // 改行コードの違いにも対応できることのテスト ....
+})
+
+
+Deno.test("メソッド read_JSON: テキストファイルを読み込んで JSON に変換して返す", async _t => {
+  const file_p = new PathLike("test_data", "data_1", "object.json")
+  const expected = { "bool": true, "short array": [1, 2, 3], "long array": [
+      {"x": 1, "y": 2}, {"x": 2, "y": 1}, {"x": 1, "y": 1}, {"x": 2, "y": 2} ] }
+  const actual = await file_p.read_JSON()
+  assertEquals(JSON.stringify(expected), JSON.stringify(actual))
+})
+
+
+Deno.test("メソッド read_JSONSync: テキストファイルを読み込んで JSON に変換して返す", _t => {
+  const file_p = new PathLike("test_data", "data_1", "object.json")
+  const expected = { "bool": true, "short array": [1, 2, 3], "long array": [
+      {"x": 1, "y": 2}, {"x": 2, "y": 1}, {"x": 1, "y": 1}, {"x": 2, "y": 2} ] }
+  const actual = file_p.read_JSONSync()
+  assertEquals(JSON.stringify(expected), JSON.stringify(actual))
 })
 
 
@@ -1305,6 +1366,74 @@ Deno.test("メソッド write_textSync: テキストをファイルに書き込�
     } catch (error) {
       assertIsError(error, Error, "already exists.")
       to_create.removeSync()
+    }
+  })
+})
+
+
+Deno.test("メソッド write_JSON: オブジェクトを JSON.stringify() した結果をファイルに書き込む", async t => {
+  const to_create = new PathLike("test_data", "data_1", "temp.json")
+  const obj = { "bool": true, "short array": [1, 2, 3], "long array": [
+      {"x": 1, "y": 2}, {"x": 2, "y": 1}, {"x": 1, "y": 1}, {"x": 2, "y": 2} ] }
+
+  await t.step(`OK: 存在しない場合はファイルを作成`, async () => {
+    await to_create.write_JSON(obj)
+    const actual = await to_create.read_JSON()
+    assertEquals(JSON.stringify(obj), JSON.stringify(actual))
+    await to_create.remove()
+  })
+
+  await t.step(`Fail-OK: create = false の場合は存在しないファイルならエラー`, async () => {
+    try {
+      await to_create.write_JSON(obj, {create:false})  
+    } catch (error) {
+      assertIsError(error, Error, "指定されたファイルが見つかりません")
+    }
+  })
+  
+  // mode = "a" で JSON を出力することは稀と思われるのでスキップ
+  
+  await t.step(`Fail-OK: mode = "x" で既存ファイルにアクセスした場合はエラー`, async () => {
+    await to_create.write_JSON(obj)
+    try {
+      await to_create.write_JSON(obj, {mode:"x"})
+    } catch (error) {
+      assertIsError(error, Error, "already exists.")
+      await to_create.remove()
+    }
+  })
+})
+
+
+Deno.test("メソッド write_JSONSync: オブジェクトを JSON.stringify() した結果をファイルに書き込む", async t => {
+  const to_create = new PathLike("test_data", "data_1", "temp.json")
+  const obj = { "bool": true, "short array": [1, 2, 3], "long array": [
+      {"x": 1, "y": 2}, {"x": 2, "y": 1}, {"x": 1, "y": 1}, {"x": 2, "y": 2} ] }
+
+  await t.step(`OK: 存在しない場合はファイルを作成`, async () => {
+    to_create.write_JSONSync(obj)
+    const actual = to_create.read_JSONSync()
+    assertEquals(JSON.stringify(obj), JSON.stringify(actual))
+    await to_create.remove()
+  })
+
+  await t.step(`Fail-OK: create = false の場合は存在しないファイルならエラー`, () => {
+    try {
+      to_create.write_JSONSync(obj, {create:false})  
+    } catch (error) {
+      assertIsError(error, Error, "指定されたファイルが見つかりません")
+    }
+  })
+  
+  // mode = "a" で JSON を出力することは稀と思われるのでスキップ
+  
+  await t.step(`Fail-OK: mode = "x" で既存ファイルにアクセスした場合はエラー`, async () => {
+    to_create.write_JSONSync(obj)
+    try {
+      to_create.write_JSONSync(obj, {mode:"x"})
+    } catch (error) {
+      assertIsError(error, Error, "already exists.")
+      await to_create.remove()
     }
   })
 })
