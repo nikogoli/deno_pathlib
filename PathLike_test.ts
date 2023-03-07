@@ -1,5 +1,4 @@
 import { assertEquals, assertIsError, assertNotEquals, assertExists, assertInstanceOf  } from "https://deno.land/std@0.170.0/testing/asserts.ts"
-import * as DenoFS from "https://deno.land/std@0.177.0/fs/mod.ts"
 
 import { PurePathLike, PathLike } from "./PathLike.ts"
 

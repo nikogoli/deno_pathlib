@@ -1,11 +1,13 @@
 import * as DenoPath from "https://deno.land/std@0.170.0/path/mod.ts"
 import * as DenoFS from "https://deno.land/std@0.177.0/fs/mod.ts"
 
+// deno-lint-ignore no-explicit-any
 type NotPromise<T> = T extends Promise<any> ? never : T
 
 type DistMerge<
   T extends Record<string,unknown>,
   S extends Record<string,unknown>
+  // deno-lint-ignore no-explicit-any
 > = S extends any ? { [K in keyof (T&S)]: (T&S)[K] } : never
 
 export class PurePathLike {
@@ -704,6 +706,7 @@ export class PathLike extends PurePathLike {
       create?: false,
       createNew?: true,
       PermissionMode?: number,
+      // deno-lint-ignore no-explicit-any
       repalcer?: (this: any, key: string, value: any) => any
       space?: string | number
     }
@@ -744,6 +747,7 @@ export class PathLike extends PurePathLike {
       create?: false,
       createNew?: true,
       PermissionMode?: number,
+      // deno-lint-ignore no-explicit-any
       repalcer?: (this: any, key: string, value: any) => any
       space?: string | number
     }
