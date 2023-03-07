@@ -268,6 +268,14 @@ export class PathLike extends PurePathLike {
     }
   }
 
+  async dirFiles() {
+    return await this.iterdirFilter(p => p.is_file())
+  }
+
+  async dirDirs() {
+    return await this.iterdirFilter(p => p.is_dir())
+  }
+
   is_dir() {
     if (this.#_is_dir){
       return this.#_is_dir
@@ -312,6 +320,21 @@ export class PathLike extends PurePathLike {
       const { isDirectory, isFile, isSymlink } = entry
       p.#set_info(isDirectory, isFile, isSymlink)
       outputs.push( await callbackAsyncFunc(p, i++) )
+    }
+    return outputs
+  }
+
+  async iterdirFilter(
+    callbackAsyncFunc: (value: PathLike, index: number) => boolean | Promise<boolean>,
+  ) {
+    const outputs: Array<PathLike> = []
+    let i = 0
+    for await (const entry of this.iterdir()){
+      const p = this.joinpath(entry.name)
+      const { isDirectory, isFile, isSymlink } = entry
+      p.#set_info(isDirectory, isFile, isSymlink)
+      const is_ok = await callbackAsyncFunc(p, i++)
+      if (is_ok){ outputs.push(p) }
     }
     return outputs
   }

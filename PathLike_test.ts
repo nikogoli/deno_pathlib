@@ -553,6 +553,55 @@ Deno.test("メソッド cwd: カレントディレクトリのパスオブジェ
 })
 
 
+Deno.test("メソッド dirFiles: ディレクトリ内のファイルのパスオブジェクトの配列を返す", async t => {
+  const data_dir = new PathLike("test_data", "data_1")
+
+  await t.step("OK: パスオブジェクトの配列を得る", async () => {
+    const files = await data_dir.dirFiles()
+    assertNotEquals(files.length, 0)
+    assertInstanceOf(files[0], PathLike)
+  })
+
+  await t.step("Fail-OK: ファイルがない場合は空の配列を返す", async () => {
+    const files = await data_dir.joinpath("data_1_1").dirFiles()
+    assertEquals(files.length, 0)
+  })
+
+  await t.step("Fail-OK: ファイルなどの無効なパスを指定するとエラー", async () => {
+    try {
+      await data_dir.joinpath("text_1.txt").dirFiles()
+      throw new Error("Not Error!")  
+    } catch (error) {
+      assertIsError(error, Error, "ディレクトリ名が無効です。")
+    }
+  })
+})
+
+
+Deno.test("メソッド dirDirs: ディレクトリ内のディレクトリのパスオブジェクトの配列を返す", async t => {
+  const data_dir = new PathLike("test_data", "data_1")
+
+  await t.step("OK: パスオブジェクトの配列を得る", async () => {
+    const files = await data_dir.dirDirs()
+    assertNotEquals(files.length, 0)
+    assertInstanceOf(files[0], PathLike)
+  })
+
+  await t.step("Fail-OK: ディレクトリがない場合は空の配列を返す", async () => {
+    const files = await new PathLike("test_data", "data_2").dirDirs()
+    assertEquals(files.length, 0)
+  })
+
+  await t.step("Fail-OK: ファイルなどの無効なパスを指定するとエラー", async () => {
+    try {
+      await data_dir.joinpath("text_1.txt").dirDirs()
+      throw new Error("Not Error!")  
+    } catch (error) {
+      assertIsError(error, Error, "ディレクトリ名が無効です。")
+    }
+  })
+})
+
 Deno.test("メソッド is_dir: ディレクトリかどうかを判定", async t => {
   const base_dir = new PathLike("test_data", "data_1")
   const dir_p = new PathLike(base_dir, "data_1_1")
@@ -634,6 +683,28 @@ Deno.test("メソッド iterdirMap: iterdir() の返り値に対して Array.map
   await t.step("OK: 同期のコールバック", async () => {
     const actual = await p.iterdirMap( p =>  p.name).then(lis => lis.sort())
   assertEquals(actual, expected)
+  })
+})
+
+
+Deno.test("メソッド iterdirFilter: iterdir() の返り値に対して Array.filter() のような処理を行う ", async t => {
+  const dir_p = new PathLike("test_data", "data_1")
+  
+  await t.step("OK: true になるものがあればそれら PathLike を配列を返す", async () => {
+    const found = await dir_p.iterdirFilter(p => p.name.startsWith("text"))
+    assertEquals(found.length, 2)
+    assertInstanceOf(found[0], PathLike)
+  })
+
+  await t.step("fail-OK: true になるパスがなければ 空の配列を返す", async ()=>{
+    const found = await dir_p.iterdirFilter(p => p.name.startsWith("not_text"))
+    assertEquals(found.length, 0)
+  })
+
+  await t.step("OK: ディレクトリとファイルの両方を対象にする", async () => {
+    const found = await dir_p.iterdirFilter(p => p.name.includes("_1"))
+    assertExists(found.find(p => p.is_dir()))
+    assertExists(found.find(p => p.is_file()))
   })
 })
 
