@@ -741,6 +741,15 @@ Deno.test("メソッド iterdirFind: iterdir() の返り値に対して Array.fi
     const found = await dir_p.iterdirFind((p:PathLike) => ["data_1_99", "text_99.txt"].includes(p.name), "both")
     assertEquals(found, undefined)
   })
+
+  await t.step("OK: 非同期関数を渡した場合も同様に機能する", async () => {
+    const found = await dir_p.iterdirFind( async p => {
+      if (p.suffix != ".txt"){ return false }
+      const tx = await p.read_text()
+      return tx.includes("pathlib")
+    }, "file")
+    assertInstanceOf(found, PathLike)
+  })
 })
 
 
@@ -777,6 +786,15 @@ Deno.test("メソッド iterdirSome: iterdir() の返り値に対して Array.so
     const is_some_true = await dir_p.iterdirSome(
       (p:PathLike) => p.name.startsWith("__data") || p.name.startsWith("__text"), "both")
     assertEquals(is_some_true, false)
+  })
+
+  await t.step("OK: 非同期関数を渡した場合も同様に機能する", async () => {
+    const found = await dir_p.iterdirSome( async p => {
+      if (p.suffix != ".txt"){ return false }
+      const tx = await p.read_text()
+      return tx.includes("pathlib")
+    }, "file")
+    assertEquals(found, true)
   })
 })
 
@@ -815,6 +833,15 @@ Deno.test("メソッド iterdirEvery: iterdir() の返り値に対して Array.e
     const is_some_true = await dir_p.iterdirEvery(
       (p:PathLike) => p.name=="sample" || p.name.includes("1"), "both")
     assertEquals(is_some_true, false)
+  })
+
+  await t.step("OK: 非同期関数を渡した場合も同様に機能する", async () => {
+    const is_some_true = await dir_p.iterdirEvery( async p => {
+      if (p.suffix != ".txt"){ return true }
+      const tx = await p.read_text()
+      return (tx.length > 0)
+    }, "file")
+    assertEquals(is_some_true, true)
   })
 })
 

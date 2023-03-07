@@ -340,7 +340,7 @@ export class PathLike extends PurePathLike {
   }
 
   async iterdirFind (
-    callbackSyncFunc: (value: PathLike, index?:number) => boolean,
+    callbackSyncFunc: (value: PathLike, index?:number) => boolean | Promise<boolean>,
     type: "file" | "dir" | "both" = "file"
   ) {
     let found: PathLike | undefined = undefined
@@ -354,9 +354,8 @@ export class PathLike extends PurePathLike {
         ){
           const p = this.joinpath(entry.name)
           p.#set_info(isDirectory, isFile, isSymlink)
-          if (callbackSyncFunc(p, i++)){
-            found = p
-          }
+          const is_ok = await callbackSyncFunc(p, i++)
+          if (is_ok){ found = p }
         }
       }
     }
@@ -364,7 +363,7 @@ export class PathLike extends PurePathLike {
   }
 
   async iterdirSome (
-    callbackSyncFunc: (value: PathLike, index?:number) => boolean,
+    callbackSyncFunc: (value: PathLike, index?:number) => boolean | Promise<boolean>,
     type: "file" | "dir" | "both" = "file"
   ) {
     let is_hit = false
@@ -377,14 +376,17 @@ export class PathLike extends PurePathLike {
       ){
         const p = this.joinpath(entry.name)
         p.#set_info(isDirectory, isFile, isSymlink)
-        is_hit = callbackSyncFunc(p, i++)
+        const is_ok = await callbackSyncFunc(p, i++)
+        if (is_ok && is_hit == false){
+          is_hit = true
+        }
       }
     }
     return is_hit
   }
 
   async iterdirEvery (
-    callbackSyncFunc: (value: PathLike, index?:number) => boolean,
+    callbackSyncFunc: (value: PathLike, index?:number) => boolean | Promise<boolean>,
     type: "file" | "dir" | "both" = "file"
   ) {
     let all_is_true = true
@@ -397,7 +399,8 @@ export class PathLike extends PurePathLike {
       ){
         const p = this.joinpath(entry.name)
         p.#set_info(isDirectory, isFile, isSymlink)
-        if (callbackSyncFunc(p, i++) == false){
+        const is_ok = await callbackSyncFunc(p, i++)
+        if (is_ok == false && all_is_true == true){
           all_is_true = false
         }
       }
