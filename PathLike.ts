@@ -27,7 +27,7 @@ export class PurePathLike {
   constructor(
     ...paths: Array<string | PurePathLike | PathLike>
   ) {
-    if (paths[0] == undefined){ // PathLike().cwd() のために許容する
+    if (paths.length == 0){ // PathLike().cwd() のために許容する
       this.parts = [""]
       this.drive = ""
       this.root = ""
@@ -39,7 +39,10 @@ export class PurePathLike {
       this.parents = () => []
       this.parent = () => this
       return
-      // throw new Error("At least one input is needed")
+    }
+    else if (paths.length > 1 && paths.some(t => t === undefined || t === null)){
+      const index = paths.findIndex(t => t === undefined || t === null)
+      throw new Error(`The arg at index: ${index} is undefined / null.`)
     }
     
     const args = paths.map(arg => (typeof arg == "string") ? arg : arg.path)

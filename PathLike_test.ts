@@ -288,6 +288,35 @@ Deno.test("単一パス入力 → attr", async (t) => {
   } ), Promise.resolve())
 })
 
+
+Deno.test("エラーになる入力", async t => {
+  await t.step("Fail-OK: 複数の入力の中に undefined が含まれるときはエラー", () => {
+    try {
+      new PathLike(Deno.env.get("NotExisted")!, "data")
+    } catch (error) {
+      assertIsError(error, Error, "undefined / null")
+    }
+  })
+
+  await t.step("Fail-OK: 複数の入力の中に null が含まれるときはエラー", () => {
+    try {
+      new PathLike(null as unknown as string, "data")
+    } catch (error) {
+      assertIsError(error, Error, "undefined / null")
+    }
+  })
+
+  await t.step("OK: 空入力はエラーにしない", () => {
+    try {
+      new PathLike()
+      throw new Error("Not Error!")
+    } catch (error) {
+      assertIsError(error, Error, "Not Error!")
+    }
+  })
+
+})
+
 // 複合インプットは .joinpath() メソッドと実質的に同じなので省略
 
 // ---------- methods ----------------------
@@ -588,7 +617,7 @@ Deno.test("メソッド dirDirs: ディレクトリ内のディレクトリの�
   })
 
   await t.step("Fail-OK: ディレクトリがない場合は空の配列を返す", async () => {
-    const files = await new PathLike("test_data", "data_2").dirDirs()
+    const files = await new PathLike("test_data", "data_1", "data_1_1").dirDirs()
     assertEquals(files.length, 0)
   })
 
@@ -1163,7 +1192,7 @@ Deno.test("メソッド rename: リネームして新しいパスのパスオブ
 
 
 Deno.test("メソッド resolve: 絶対パスを返す", async t => {
-  const base_dir = new PathLike(Deno.env.get("gitPath")!, "deno_pathlib")
+  const base_dir = new PathLike(Deno.env.get("GitHubPath")!, "deno_pathlib")
   const file = new PathLike("test_data", "data_1", "text_1.txt")
   const abs = new PathLike(base_dir, file)
 
