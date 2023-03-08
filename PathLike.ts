@@ -729,7 +729,8 @@ export class PathLike extends PurePathLike {
   }
 
   async write_JSON(
-    data: Record<string, unknown>,
+    // deno-lint-ignore no-explicit-any
+    data: any,
     option?: {
       mode? : "x" | "a"
       create?: false,
@@ -770,7 +771,8 @@ export class PathLike extends PurePathLike {
   }
 
   write_JSONSync(
-    data: Record<string, unknown>,
+    // deno-lint-ignore no-explicit-any
+    data: any,
     option?: {
       mode? : "x" | "a"
       create?: false,
