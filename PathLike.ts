@@ -592,9 +592,9 @@ export class PathLike extends PurePathLike {
   }
 
   resolve(strict?: true) {
-    const resolved = DenoPath.resolve(this.path)
+    const resolved = new PathLike(DenoPath.resolve(this.path))
     if (strict){
-      new PathLike(resolved).existsSync()
+      resolved.existsSync()
     }
     return resolved
   }

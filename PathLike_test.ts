@@ -1191,13 +1191,13 @@ Deno.test("メソッド rename: リネームして新しいパスのパスオブ
 })
 
 
-Deno.test("メソッド resolve: 絶対パスを返す", async t => {
+Deno.test("メソッド resolve: 絶対パスに変更した PathLike を返す", async t => {
   const base_dir = new PathLike(Deno.env.get("GitHubPath")!, "deno_pathlib")
   const file = new PathLike("test_data", "data_1", "text_1.txt")
   const abs = new PathLike(base_dir, file)
 
   await t.step(`OK: 相対から絶対パスを解決`, () => {
-    assertEquals(file.resolve(), abs.path)
+    assertEquals(file.resolve().path, abs.path)
   })
 
   await t.step(`Fail-OK: 存在しないパスを解決しようとするとエラー`, () => {
