@@ -528,15 +528,15 @@ export class PathLike extends PurePathLike {
 
   async read_lines(length?: number, encoding?: "utf-8" | string) {
     const text = await this.read_text(encoding)
-    const eol = DenoFS.detect(text) ?? (DenoPath.sep == "\\") ? DenoFS.EOL.CRLF : DenoFS.EOL.LF
-    const lines = text.split(eol)
+    // ファイルの実態を確認しないので例外に弱く、使えない
+    // const eol = DenoFS.detect(text) ?? (DenoPath.sep == "\\") ? DenoFS.EOL.CRLF : DenoFS.EOL.LF
+    const lines = text.split(/\r\n|\r|\n/)
     return (length) ? lines.slice(0, length) : lines
   }
 
   read_linesSync(length?: number, encoding?: "utf-8" | string) {
     const text = this.read_textSync(encoding)
-    const eol = DenoFS.detect(text) ?? (DenoPath.sep == "\\") ? DenoFS.EOL.CRLF : DenoFS.EOL.LF
-    const lines = text.split(eol)
+    const lines = text.split(/\r\n|\r|\n/)
     return (length) ? lines.slice(0, length) : lines
   }
 
