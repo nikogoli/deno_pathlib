@@ -241,6 +241,11 @@ export class PathLike extends PurePathLike {
   #_is_file: boolean | undefined = undefined
   #_is_symlink: boolean | undefined = undefined
 
+  async copy(dest: string | PathLike, options?: DenoFS.CopyOptions) {
+    const to = typeof dest == "string" ? dest : dest.path
+    await DenoFS.copy(this.path, to, options)
+  }
+
   cwd() {
     return new PathLike(Deno.cwd())
   }
@@ -260,6 +265,10 @@ export class PathLike extends PurePathLike {
     } catch (_error) {
       return false
     }
+  }
+
+  async ensureDir() {
+    await DenoFS.ensureDir(this.parent().path)
   }
 
   existsSync() {
@@ -439,6 +448,11 @@ export class PathLike extends PurePathLike {
   ){
     const opt: Parameters<typeof Deno.mkdirSync>["1"] = option?.parents ? {...option, recursive: option.parents} : option
     await Deno.mkdir(this.path, opt)
+  }
+
+  async move(dest: string | PathLike, overwrite?: true) {
+    const to = typeof dest == "string" ? dest : dest.path
+    await DenoFS.move(this.path, to, {overwrite})
   }
 
   openSync(option?: {
