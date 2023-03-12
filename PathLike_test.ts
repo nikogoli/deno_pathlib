@@ -575,6 +575,29 @@ Deno.test("メソッド with_suffix: suffix を差し替えたパスによるパ
 
 
 // -------------- PathLike ---------------------
+Deno.test("メソッド copy: ファイル/ディレクトリをコピーしてコピー後の PathLike を返す", async t => {
+  await t.step("OK: ファイルをコピー", async () => {
+    const base_p = new PathLike("test_data", "data_1", "text_1.txt")
+    const expected = await base_p.read_text()
+    const target = new PathLike("test_data", "copied.txt")
+    const copied = await base_p.copy(target)
+    const actual = await copied.read_text()
+    assertEquals(actual, expected)
+    await copied.remove()
+  })
+
+  await t.step("OK: ディレクトリを中身ごとコピーしてコピー後の PathLike を返す", async () => {
+    const base_p = new PathLike("test_data", "data_2")
+    const expteced = await base_p.iterdirMap(p => p.name).then(lis => lis.sort().join(", "))
+    const target = new PathLike("test_data", "copied_dir")
+    const copied = await base_p.copy(target)
+    const actual = await copied.iterdirMap(p => p.name).then(lis => lis.sort().join(", "))
+    assertEquals(actual, expteced)
+    await copied.remove({recursive:true})
+  })
+})
+
+
 Deno.test("メソッド cwd: カレントディレクトリのパスオブジェクトを返す", () => {
   const actual = new PathLike().cwd().path
   const expected = Deno.cwd()

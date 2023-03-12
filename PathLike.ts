@@ -239,8 +239,9 @@ export class PathLike {
   //  ↑ PurePath-method   ↓ Path-method
 
   async copy(dest: string | PathLike, options?: DenoFS.CopyOptions) {
-    const to = typeof dest == "string" ? dest : dest.path
-    await DenoFS.copy(this.path, to, options)
+    const dest_p = typeof dest == "string" ? new PathLike(dest) : dest
+    await DenoFS.copy(this.path, dest_p.path, options)
+    return dest_p
   }
 
   cwd() {
