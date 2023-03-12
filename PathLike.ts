@@ -265,8 +265,8 @@ export class PathLike {
     }
   }
 
-  async ensureDir() {
-    await DenoFS.ensureDir(this.parent().path)
+  async ensureDir(options?:{is_file: true}) {
+    await DenoFS.ensureDir(options?.is_file ? this.parent().path : this.path)
   }
 
   existsSync() {

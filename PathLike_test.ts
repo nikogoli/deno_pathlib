@@ -605,6 +605,27 @@ Deno.test("メソッド cwd: カレントディレクトリのパスオブジェ
 })
 
 
+Deno.test("メソッド ensureDir: DenoFS.ensureDir() を実行する", async t => {
+  const fl_target = new PathLike("test_data", "data_3", "data_3_3", "temp.txt")
+  const dir_target = fl_target.parent()
+
+  await t.step("OK: ディレクトリの場合はそれ自体に ensureDir する", async () => {
+    await dir_target.ensureDir()
+    const is_exist = await dir_target.exists()
+    assertEquals(is_exist, true)
+    await new PathLike("test_data", "data_3").remove({recursive:true})
+  })
+
+  await t.step("OK: is_file が true の場合はその親ディレクトリを ensureDir する", async () => {
+    await fl_target.ensureDir({is_file: true})
+    const par_dit = fl_target.parent()
+    const is_exist = await par_dit.exists()
+    assertEquals(is_exist, true)
+    await new PathLike("test_data", "data_3").remove({recursive:true})
+  })
+})
+
+
 Deno.test("メソッド dirFiles: ディレクトリ内のファイルのパスオブジェクトの配列を返す", async t => {
   const data_dir = new PathLike("test_data", "data_1")
 
