@@ -631,6 +631,43 @@ Deno.test("メソッド dirDirs: ディレクトリ内のディレクトリの�
   })
 })
 
+
+Deno.test("メソッド to_resolve: PathLike を基準に相対パスを解決したPathLike を返す", async t => {
+  const base_p_abs = new PathLike(Deno.cwd(), "test_data", "data_2", "text_2.txt")
+  const base_p_rel = new PathLike("test_data", "data_2", "text_2.txt")
+  const expected = new PathLike(Deno.cwd(), "test_data", "data_1", "text_1.txt").path
+
+  await t.step("OK: 絶対パスの PathLike から相対パスを正しく解決する", () => {
+    const actual = base_p_abs.to_resolve("..", "data_1", "text_1.txt").path
+    assertEquals(actual, expected)
+  })
+
+  await t.step("OK: 相対パスの PathLike から相対パスを正しく解決する", () => {
+    const actual = base_p_rel.to_resolve("..", "data_1", "text_1.txt").path
+    assertEquals(actual, expected)
+  })
+  
+  await t.step("OK: 絶対パスの場合、結果はカレントディレクトリに依存しない", () => {
+    const cwd = new PathLike().cwd()
+    Deno.chdir(cwd.parent().path)
+    const actual = base_p_abs.to_resolve("..", "data_1", "text_1.txt").path
+    assertEquals(actual, expected)
+    Deno.chdir(cwd.path)
+  })
+
+  await t.step("Fail-OK: 相対パスの場合、結果および成否はカレントディレクトリに依存する", () => {
+    const cwd = new PathLike().cwd()
+    Deno.chdir(cwd.parent().path)
+    try {
+      const _actual = base_p_rel.to_resolve("..", "data_1", "text_1.txt").path
+    } catch (error) {
+      assertIsError(error, Error, "指定されたパスが見つかりません。")
+      Deno.chdir(cwd.path)
+    }
+  })
+})
+
+
 Deno.test("メソッド is_dir: ディレクトリかどうかを判定", async t => {
   const base_dir = new PathLike("test_data", "data_1")
   const dir_p = new PathLike(base_dir, "data_1_1")
