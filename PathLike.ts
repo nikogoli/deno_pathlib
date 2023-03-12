@@ -449,8 +449,9 @@ export class PathLike {
   }
 
   async move(dest: string | PathLike, overwrite?: true) {
-    const to = typeof dest == "string" ? dest : dest.path
-    await DenoFS.move(this.path, to, {overwrite})
+    const dest_p = typeof dest == "string" ? new PathLike(dest) : dest
+    await DenoFS.move(this.path, dest_p.path, {overwrite})
+    return dest_p
   }
 
   openSync(option?: {

@@ -985,6 +985,30 @@ Deno.test("メソッド mkdir: 指定したパスにディレクトリ作成", a
 })
 
 
+Deno.test("メソッド move: ファイル/ディレクトリを移動し、移動後の PathLike を返す", async t => {
+  await t.step("OK: ファイルを移動", async () => {
+    const base_p = new PathLike("test_data", "data_1", "text_1.txt")
+    const expected = await base_p.read_text()
+    const target = new PathLike("test_data", "moved.txt")
+    const moved = await base_p.move(target)
+    const actual = await moved.read_text()
+    assertEquals(actual, expected)
+    await moved.move(base_p)
+  })
+
+  await t.step("OK: ディレクトリを移動", async () => {
+    const base_p = new PathLike("test_data", "data_2")
+    const expteced = await base_p.iterdirMap(p => p.name).then(lis => lis.sort().join(", "))
+    const target = new PathLike("test_data", "moved_dir")
+    const moved = await base_p.move(target)
+    const actual = await moved.iterdirMap(p => p.name).then(lis => lis.sort().join(", "))
+    assertEquals(actual, expteced)
+    await moved.move(base_p)
+  })
+})
+
+
+
 Deno.test("メソッド open: ファイルを開いて Deno.FsFile を返す", async t => {
   const text_path = new PathLike("test_data", "data_1", "before.txt")
   const not_exist_path = new PathLike("test_data", "data_1", "text_99.txt")
