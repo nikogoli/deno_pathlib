@@ -610,8 +610,8 @@ export class PathLike {
     return resolved
   }
 
-  async remove() {
-    await Deno.remove(this.path)
+  async remove(options?: Deno.RemoveOptions) {
+    await Deno.remove(this.path, options)
   }
 
   removeSync() {
