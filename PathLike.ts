@@ -10,7 +10,7 @@ type DistMerge<
   // deno-lint-ignore no-explicit-any
 > = S extends any ? { [K in keyof (T&S)]: (T&S)[K] } : never
 
-export class PurePathLike {
+export class PathLike {
   path = ""
   parts: Array<string> = []
   drive = ""
@@ -20,12 +20,15 @@ export class PurePathLike {
   suffixes: Array<string> = []
   suffix = ""
   stem = ""
-  parents: () => Array<PurePathLike | PathLike>;
-  parent: () => PurePathLike | PathLike;
+  parents: () => Array<PathLike>;
+  parent: () => PathLike;
+  #_is_dir: boolean | undefined = undefined;
+  #_is_file: boolean | undefined = undefined;
+  #_is_symlink: boolean | undefined = undefined;
   
 
   constructor(
-    ...paths: Array<string | PurePathLike | PathLike>
+    ...paths: Array<string | PathLike>
   ) {
     if (paths.length == 0){ // PathLike().cwd() のために許容する
       this.parts = [""]
@@ -160,14 +163,14 @@ export class PurePathLike {
   }
 
 
-  is_relative_to(target: string | PurePathLike | PathLike): boolean {
+  is_relative_to(target: string | PathLike): boolean {
     const temp = typeof target == "string" ? new PathLike(target) : target
     const is_not_match = temp.parts.map((part,idx) => part == this.parts[idx]).some(x => x === false)
     return !is_not_match
   }
 
   
-  joinpath(...args: Array<string | PurePathLike | PathLike>) {
+  joinpath(...args: Array<string | PathLike>) {
     return new PathLike(this.path, ...args)
   }
 
@@ -178,7 +181,7 @@ export class PurePathLike {
   }
 
 
-  relative_to(target: string | PurePathLike | PathLike) {
+  relative_to(target: string | PathLike) {
     const temp = typeof target == "string" ? new PathLike(target) : target
     if (this.is_absolute() == temp.is_absolute()){
       const is_not_match = temp.parts.map((part,idx) => part == this.parts[idx]).some(x => x === false)
@@ -232,14 +235,8 @@ export class PurePathLike {
       return new PathLike(this.parent(), `${this.stem}${new_suf}`)
     }
   }
-}
 
-
-
-export class PathLike extends PurePathLike {
-  #_is_dir: boolean | undefined = undefined
-  #_is_file: boolean | undefined = undefined
-  #_is_symlink: boolean | undefined = undefined
+  //  ↑ PurePath-method   ↓ Path-method
 
   async copy(dest: string | PathLike, options?: DenoFS.CopyOptions) {
     const to = typeof dest == "string" ? dest : dest.path
@@ -571,7 +568,7 @@ export class PathLike extends PurePathLike {
     return Deno.readLinkSync(this.path)
   }
 
-  async rename(...args: Array<string | PurePathLike | PathLike>) {
+  async rename(...args: Array<string | PathLike>) {
     const new_p = new PathLike(...args)
     try {
       const _x = new_p.statSync()
@@ -582,7 +579,7 @@ export class PathLike extends PurePathLike {
     throw new Error(`target ${new_p.path} already exists.`)
   }
 
-  renameSync(...args: Array<string | PurePathLike | PathLike>) {
+  renameSync(...args: Array<string | PathLike>) {
     const new_p = new PathLike(...args)
     try {
       const _x = new_p.statSync()
@@ -593,13 +590,13 @@ export class PathLike extends PurePathLike {
     throw new Error(`target ${new_p.path} already exists.`)
   }
 
-  async replace(...args: Array<string | PurePathLike | PathLike>) {
+  async replace(...args: Array<string | PathLike>) {
     const new_p = new PathLike(...args)
     await Deno.rename(this.path, new_p.path)
     return new_p 
   }
 
-  replaceSync(...args: Array<string | PurePathLike | PathLike>) {
+  replaceSync(...args: Array<string | PathLike>) {
     const new_p = new PathLike(...args)
     Deno.renameSync(this.path, new_p.path)
     return new_p
@@ -622,7 +619,7 @@ export class PathLike extends PurePathLike {
   }
 
   async symlink(
-    link_to:string | PurePathLike | PathLike,
+    link_to:string | PathLike,
     type: "file" | "dir"
   ) {
     const link_path = new PathLike(link_to).path
@@ -630,7 +627,7 @@ export class PathLike extends PurePathLike {
   }
 
   symlinkSync(
-    link_to:string | PurePathLike | PathLike,
+    link_to:string | PathLike,
     type: "file" | "dir"
   ) {
     const link_path = new PathLike(link_to).path
@@ -823,5 +820,3 @@ export class PathLike extends PurePathLike {
     this.#_is_symlink = is_s
   }
 }
-
-

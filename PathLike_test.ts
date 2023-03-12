@@ -1,6 +1,6 @@
 import { assertEquals, assertIsError, assertNotEquals, assertExists, assertInstanceOf  } from "https://deno.land/std@0.170.0/testing/asserts.ts"
 
-import { PurePathLike, PathLike } from "./PathLike.ts"
+import { PathLike } from "./PathLike.ts"
 
 
 const Absolute = {
@@ -211,7 +211,7 @@ Object.entries({
 }).forEach(([k,v]) => PathData.set(k, v))
 
 
-function same_check(A:PurePathLike, B:PurePathLike){
+function same_check(A:PathLike, B:PathLike){
   assertEquals(A.drive, B.drive)
   assertEquals(A.root, B.root)
   assertEquals(A.anchor, B.anchor)
@@ -228,7 +228,7 @@ function same_check(A:PurePathLike, B:PurePathLike){
 /*
 Deno.test("作成：空入力はエラー", () => {
   try {
-    new PurePathLike()
+    new PathLike()
     throw new Error("Not Error")
   } catch (error) {
     assertIsError(error, Error, "At least one input is needed") 
@@ -243,8 +243,8 @@ Deno.test("単一パス入力 → attr", async (t) => {
       const {
         posix, windows, drive, root, anchor, name, stem, suffix, suffixes, parts,
         parents_paths, parent_path } = data
-      const base_by_win = new PurePathLike(windows)
-      const base_by_posix = new PurePathLike(posix)
+      const base_by_win = new PathLike(windows)
+      const base_by_posix = new PathLike(posix)
 
       const is_same = await _tt.step("OK: posix 経由と windows 経由のパスオブジェクトが等しい", () => {
         same_check(base_by_posix, base_by_win)
@@ -323,7 +323,7 @@ Deno.test("エラーになる入力", async t => {
 Deno.test("メソッド as_posix: 区切り文字を '\\' から '/' に変換 (パス頭の './' は削除)", async (t) => {
   await [...PathData.entries()].reduce( (pre, [label, data]) => pre.then( async () => {
     const { posix, windows } = data
-    const actual = new PurePathLike(windows).as_posix()
+    const actual = new PathLike(windows).as_posix()
     await t.step(`OK: ${label} を ${posix.replace("./", "")} に変換`, () => {
       assertEquals(actual, posix.replace("./", ""))
     })
@@ -336,14 +336,14 @@ Deno.test("メソッド as_uri: パスを 'file:///'~ & posix 形式に変換", 
     const { posix, windows } = data
     if (label.includes("絶対") && !label.includes("ルートなし")){
       await t.step(`OK: ${label} は絶対パスなので実行`, () => {
-        const actual = new PurePathLike(windows).as_uri()
+        const actual = new PathLike(windows).as_uri()
         const expected = "file:///" + posix.replace("./", "")
         assertEquals(actual, expected)
       })
     } else {
       await t.step(`Fail-OK: ${label} は相対 / no-root なのでエラー`, () => {
         try {
-          new PurePathLike(windows).as_uri()
+          new PathLike(windows).as_uri()
           throw new Error("Not Error")
         } catch (error) {
           assertIsError<TypeError>( error, TypeError, "Must be an absolute path.")
@@ -360,7 +360,7 @@ Deno.test("メソッド is_absolute: 絶対パスかどうか (≒ anchor があ
     const text = `OK: ${label} は ${expected}`
     const { windows } = data
     await t.step(text, () => {
-      assertEquals(new PurePathLike(windows).is_absolute(), expected)
+      assertEquals(new PathLike(windows).is_absolute(), expected)
     })
   }), Promise.resolve() )
 })
@@ -380,7 +380,7 @@ Deno.test("メソッド is_relative_to: 入力パスがパスオブジェクト�
     const head_3part = windows.split("\\").slice(0,3).join("\\")
     const head_3part_with_typo = head_3part.slice(0,-1)
 
-    const base = new PurePathLike(windows)
+    const base = new PathLike(windows)
     // string で入力しても内部では PurePathLike のインスタンスに変換して処理されるので、入力タイプの違いはチェックしない
     await t.step(`OK: ${label} に対して ${head_3part} は true`, () => {
       assertEquals(base.is_relative_to(head_3part), true)
@@ -404,17 +404,17 @@ Deno.test("メソッド joinpath: 入力した string や パスオブジェク�
         console.log(`スキップ：${label} は parts が1個`)
         return
       }
-      const base = new PurePathLike(windows)
+      const base = new PathLike(windows)
       await t.step(`OK: ${label} のパス = その parts を string として入力したときのパス`, () => {
-        assertEquals(base.path, new PurePathLike(...parts).path)
+        assertEquals(base.path, new PathLike(...parts).path)
       })
 
       await t.step(`OK: ${label} のパス ≠ その parts を 1個省いて string として入力したときのパス`, () => {
-        assertNotEquals(base.path, new PurePathLike(...parts.slice(0,-1)).path)
+        assertNotEquals(base.path, new PathLike(...parts.slice(0,-1)).path)
       })
 
       await t.step(`OK: ${label} のパス = その parts を パスオブジェクト として入力したときのパス`, () => {
-        assertEquals(base.path, new PurePathLike(...parts.map(tx => new PurePathLike(tx))).path)
+        assertEquals(base.path, new PathLike(...parts.map(tx => new PathLike(tx))).path)
       })
     }), Promise.resolve()
   )
@@ -422,7 +422,7 @@ Deno.test("メソッド joinpath: 入力した string や パスオブジェク�
 
 
 Deno.test("メソッド match: (win表現の)正規表現がマッチするかどうかを返す (glob はよくわからないので省略)", async (t) => {
-  const base = new PurePathLike(PathData.get("絶対")!.windows)
+  const base = new PathLike(PathData.get("絶対")!.windows)
   const path_reg = /Windows\\Shell/
   const name_reg = /Default.+\.gz/
 
@@ -447,7 +447,7 @@ Deno.test("メソッド relative_to: 入力パスがパスオブジェクトの�
         const head_3part = windows.split("\\").slice(0,3).join("\\")
         const head_3part_with_typo = head_3part.slice(0,-1)
         const expected = windows.split("\\").slice(3).join("\\")
-        const base = new PurePathLike(windows)
+        const base = new PathLike(windows)
 
         await t.step(`OK: ${label} を ${head_3part} の相対パス化したものが ${expected} に等しい`, () => {
           assertEquals(base.relative_to(head_3part).path, expected)
@@ -469,7 +469,7 @@ Deno.test("メソッド relative_to: 入力パスがパスオブジェクトの�
   const { windows:rel_win } = PathData.get("相対")!
   await t.step(`Fail-OK: 適用対象とインプットの絶対--相対が不一致の場合はエラー`, () => {
     try {
-      new PurePathLike(abs_win).relative_to(rel_win)
+      new PathLike(abs_win).relative_to(rel_win)
       throw new Error("No Error")
     } catch (error) {
       assertIsError(error, Error, "One path is relative and the other absolute.")
@@ -482,7 +482,7 @@ Deno.test("メソッド with_name: name を差し替えたパスによるパス�
   const new_name = "new_name.txt"
   await [...PathData.entries()].reduce( (pre, [label, data]) => pre.then( async () => {
       const { windows } = data
-      const base = new PurePathLike(windows)
+      const base = new PathLike(windows)
       const expected = [...windows.split("\\").slice(0,-1), new_name].join("\\")
           .replace("./", "").replace(".\\", "")
 
@@ -514,7 +514,7 @@ Deno.test("メソッド with_stem: stem を差し替えたパスによるパス�
   const new_stem = "new_stem"
   await [...PathData.entries()].reduce( (pre, [label, data]) => pre.then( async () => {
       const { windows, suffix } = data
-      const base = new PurePathLike(windows)
+      const base = new PathLike(windows)
       const expected = [...windows.split("\\").slice(0,-1), new_stem+suffix].join("\\")
           .replace("./", "").replace(".\\", "")
 
@@ -546,7 +546,7 @@ Deno.test("メソッド with_suffix: suffix を差し替えたパスによるパ
   const new_suffix = ".jpeg"
   await [...PathData.entries()].reduce( (pre, [label, data]) => pre.then( async () => {
       const { windows, stem } = data
-      const base = new PurePathLike(windows)
+      const base = new PathLike(windows)
       const expected = [...windows.split("\\").slice(0,-1), stem+new_suffix].join("\\")
           .replace("./", "").replace(".\\", "")
 
@@ -957,6 +957,7 @@ Deno.test("メソッド open: ファイルを開いて Deno.FsFile を返す", a
     const file = await text_path.open({mode:"w", truncate:true})
     assertExists(file)
     file.close()
+    await text_path.write_text("before") // trunacate が中身を消してしまうので元に戻す
   })
   
   await t.step(`Fail-OK: mode "x" ですでに存在するファイルを開くとエラー`, async () => {
@@ -1028,6 +1029,7 @@ Deno.test("メソッド openSync: ファイルを開いて Deno.FsFile を返す
     const file = text_path.openSync({mode:"w", truncate:true})
     assertExists(file)
     file.close()
+    text_path.write_textSync("before") // trunacate が中身を消してしまうので元に戻す
   })
   
   await t.step(`Fail-OK: mode "x" ですでに存在するファイルを開くとエラー`,  () => {
