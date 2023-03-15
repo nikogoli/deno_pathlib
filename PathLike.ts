@@ -454,6 +454,16 @@ export class PathLike {
     return dest_p
   }
 
+  async moveToDir(dest: string | PathLike, overwrite?: true) {
+    const dest_dir = typeof dest == "string" ? new PathLike(dest) : dest
+    if (dest_dir.is_dir() === false){
+      throw new Error(`dest-path ${dest_dir.path} is not directory.`)  
+    }
+    const dest_p = new PathLike(dest, this.name)
+    await DenoFS.move(this.path, dest_p.path, {overwrite})
+    return dest_p
+  }
+
   openSync(option?: {
     mode? : "r" | "w" | "x" | "a",
     truncate?: true,
