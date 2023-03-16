@@ -1,6 +1,6 @@
 import { assertEquals, assertIsError, assertNotEquals, assertExists, assertInstanceOf  } from "https://deno.land/std@0.170.0/testing/asserts.ts"
 
-import { PathLike } from "./PathLike.ts"
+import { PathLike, r } from "./PathLike.ts"
 
 
 const Absolute = {
@@ -235,6 +235,15 @@ Deno.test("作成：空入力はエラー", () => {
   }
 })
 */
+
+Deno.test("関数 r: String.raw を用いてテンプレートリテラルを raw 文字列として処理する", async t => {
+  await t.step("エスケープなし文字列 + r による PathLike がエスケープあり文字列による PathLike と等しい", () => {
+    assertEquals(
+      new PathLike(r`C:\Users\Default\AppData\Local\Microsoft\Windows\Shell\DefaultLayouts.tar.gz`).path,
+      new PathLike("C:\\Users\\Default\\AppData\\Local\\Microsoft\\Windows\\Shell\\DefaultLayouts.tar.gz").path
+    )
+  })
+})
 
 // ------------- single input  --------------------
 Deno.test("単一パス入力 → attr", async (t) => {

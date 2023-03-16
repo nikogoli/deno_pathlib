@@ -10,6 +10,12 @@ type DistMerge<
   // deno-lint-ignore no-explicit-any
 > = S extends any ? { [K in keyof (T&S)]: (T&S)[K] } : never
 
+
+export function r(template: Parameters<typeof String.raw>[0]){
+  return String.raw(template)
+}
+
+
 export class PathLike {
   path = ""
   parts: Array<string> = []
