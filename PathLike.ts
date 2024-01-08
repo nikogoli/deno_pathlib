@@ -262,12 +262,16 @@ export class PathLike {
     Deno.chmodSync(this.path, mode)
   }
 
-  async exists() {
+  async exists(throw_error?: true) {
     try {
       const _x = await this.stat()
       return true
-    } catch (_error) {
-      return false
+    } catch (error) {
+      if (throw_error){
+        throw error
+      } else {
+        return false
+      }
     }
   }
 
