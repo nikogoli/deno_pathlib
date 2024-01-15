@@ -628,6 +628,18 @@ export class PathLike {
     throw new Error(`target ${new_p.path} already exists.`)
   }
 
+  async renameTo(new_name:string) {
+    const new_p = this.with_name(new_name)
+    try {
+      const _x = new_p.statSync()
+    } catch (_error) {
+      await Deno.rename(this.path, new_p.path)
+      return new_p 
+    }
+    throw new Error(`target ${new_p.path} already exists.`)
+  }
+
+
   async replace(...args: Array<string | PathLike>) {
     const new_p = new PathLike(...args)
     await Deno.rename(this.path, new_p.path)

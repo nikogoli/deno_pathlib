@@ -1348,6 +1348,26 @@ Deno.test("メソッド rename: リネームして新しいパスのパスオブ
 })
 
 
+Deno.test("メソッド renameTo: 名前を指定してリネームし新しいパスのパスオブジェクトを返す", async t => {
+  const before = new PathLike("test_data", "data_1", "before.txt")
+  const after = new PathLike("test_data", "data_1", "after.txt")
+
+  await t.step(`OK: リネームする`, async () => {
+    const renamed = await before.renameTo("after.txt")
+    assertEquals(renamed.path, after.path)
+    await renamed.renameTo("before.txt")
+  })
+
+  await t.step(`Fail-OK: リネーム先のパスがすでに存在する場合はエラーを出す`, async () => {
+    try {
+      await before.renameTo("text_1.txt")
+    } catch (error) {
+      assertIsError(error, Error, "already exists.")
+    }
+  })
+})
+
+
 Deno.test("メソッド resolve: 絶対パスに変更した PathLike を返す", async t => {
   const base_dir = new PathLike(Deno.env.get("GitHubPath")!, "deno_pathlib")
   const file = new PathLike("test_data", "data_1", "text_1.txt")
