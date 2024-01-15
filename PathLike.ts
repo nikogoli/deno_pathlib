@@ -265,7 +265,7 @@ export class PathLike {
   async exists(throw_error?: true) {
     try {
       const _x = await this.stat()
-      return true
+      return this
     } catch (error) {
       if (throw_error){
         throw error

@@ -621,7 +621,7 @@ Deno.test("メソッド ensureDir: DenoFS.ensureDir() を実行する", async t 
   await t.step("OK: ディレクトリの場合はそれ自体に ensureDir する", async () => {
     await dir_target.ensureDir()
     const is_exist = await dir_target.exists()
-    assertEquals(is_exist, true)
+    assertNotEquals(is_exist, false)
     await new PathLike("test_data", "data_3").remove({recursive:true})
   })
 
@@ -629,7 +629,7 @@ Deno.test("メソッド ensureDir: DenoFS.ensureDir() を実行する", async t 
     await fl_target.ensureDir({is_file: true})
     const par_dit = fl_target.parent()
     const is_exist = await par_dit.exists()
-    assertEquals(is_exist, true)
+    assertNotEquals(is_exist, false)
     await new PathLike("test_data", "data_3").remove({recursive:true})
   })
 })
