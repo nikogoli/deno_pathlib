@@ -160,7 +160,7 @@ export class PathLike {
 
 
   as_uri() {
-    return DenoPath.toFileUrl(this.path).href
+    return DenoPath.toFileUrl(this.resolve().path).href
   }
 
 
