@@ -919,7 +919,7 @@ Deno.test("メソッド mkdir: 指定したパスにディレクトリ作成", a
   })
 
   await t.step(`OK: 経路に存在しないディレクトリがある場合に {parents:true} オプションを与えると成功`, async () => {
-    await nested_child.mkdir({parents: true})
+    await nested_child.mkdir({recursive: true})
     const iter = Deno.readDir(nested_child.path)
     assertExists(iter)
     await Deno.remove(nested_child.path, {recursive:true})

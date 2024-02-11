@@ -427,16 +427,16 @@ export class PathLike {
   }
 
   mkdirSync(
-    option?: {mode?:number, parents?: boolean}
+    option?: {mode?:number, recursive?: boolean}
   ){
-    const opt: Parameters<typeof Deno.mkdirSync>["1"] = option?.parents ? {...option, recursive: option.parents} : option
+    const opt: Parameters<typeof Deno.mkdirSync>["1"] = option
     Deno.mkdirSync(this.path, opt)
   }
 
   async mkdir(
-    option?: {mode?:number, parents?: boolean}
+    option?: {mode?:number, recursive?: boolean}
   ){
-    const opt: Parameters<typeof Deno.mkdirSync>["1"] = option?.parents ? {...option, recursive: option.parents} : option
+    const opt: Parameters<typeof Deno.mkdirSync>["1"] = option
     await Deno.mkdir(this.path, opt)
   }
 
