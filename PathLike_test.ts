@@ -530,6 +530,29 @@ Deno.test("メソッド copy: ファイル/ディレクトリをコピーして�
 })
 
 
+Deno.test("メソッド copyInto: ファイル/ディレクトリを指定ディレクトリ直下にコピーしてコピー後の PathLike を返す", async t => {
+  await t.step("OK: ファイルをコピー", async () => {
+    const base_p = new PathLike("test_data", "data_1", "text_1.txt")
+    const expected = await base_p.read_text()
+    const dest_dir_p = new PathLike("test_data")
+    const copied = await base_p.copyInto(dest_dir_p)
+    const actual = await copied.read_text()
+    assertEquals(actual, expected)
+    await copied.remove()
+  })
+
+  await t.step("OK: ディレクトリを中身ごとコピーしてコピー後の PathLike を返す", async () => {
+    const base_p = new PathLike("test_data", "data_2")
+    const expteced = await base_p.iterdirMap(p => p.name).then(lis => lis.sort().join(", "))
+    const container = await new PathLike("test_data", "container").ensureDir()
+    const copied = await base_p.copyInto(container)
+    const actual = await copied.iterdirMap(p => p.name).then(lis => lis.sort().join(", "))
+    assertEquals(actual, expteced)
+    await container.remove({removeNonEmptyDir:true})
+  })
+})
+
+
 Deno.test("メソッド cwd: カレントディレクトリのパスオブジェクトを返す", () => {
   const actual = new PathLike().cwd().path
   const expected = Deno.cwd()

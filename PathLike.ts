@@ -264,6 +264,28 @@ export class PathLike {
     return dest_p
   }
 
+
+  /**
+   * このパスが指す対象を与えられた dest 直下に複製し、複製後のパスを示す PathLike インスタンスを返す。
+   * dest の指す対象がディレクトリデない場合、および複製先がすでに存在する場合は error を投げる
+   * - `{overwrite:true}`が与えられた場合は error を投げずに上書きを行う
+   * @param dest 複製後の親となるディレクトリを示す文字列あるいは PathLike インスタンス
+   * @param options 
+   */
+  async copyInto(
+    dest: string | PathLike,
+    options?: {overwrite?: true, preserveTimestamps?: true}
+  ){
+    const dest_dir = typeof dest == "string" ? new PathLike(dest) : dest
+    if (dest_dir.is_dir() === false){
+      throw new Error(`dest-path ${dest_dir.path} is not directory.`)  
+    }
+    const dest_p = new PathLike(dest, this.name)
+    const opt: Parameters<typeof DenoFS.copy>[2] = options
+    await DenoFS.copy(this.path, dest_p.path, opt)
+    return dest_p
+  }
+
   
   /**
    * カレントディレクトリのパスを示す PathLike インスタンスを返す
