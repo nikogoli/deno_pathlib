@@ -1061,7 +1061,7 @@ export class PathLike {
     }
   ) {
     if (option?.mode == "x"){
-      const is_exist = this.existsSync()
+      const is_exist = await this.exists()
       if (is_exist){
         throw new Error(`path ${this.path} is already exists.`)
       }
