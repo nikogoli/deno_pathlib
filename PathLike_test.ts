@@ -954,7 +954,7 @@ Deno.test("メソッド moveToDir: 指定したパスの下にファイル/デ�
   await t.step("OK: ファイルを移動", async () => {
     const base_p = new PathLike("test_data", "data_1", "text_1.txt")
     const expected = await base_p.read_text()
-    const moved = await base_p.moveToDir("test_data")
+    const moved = await base_p.moveInto("test_data")
     const actual = await moved.read_text()
     assertEquals(actual, expected)
     await moved.move(base_p)
@@ -963,7 +963,7 @@ Deno.test("メソッド moveToDir: 指定したパスの下にファイル/デ�
   await t.step("OK: ディレクトリを移動", async () => {
     const base_p = new PathLike("test_data", "data_2")
     const expteced = await base_p.iterdirMap(p => p.name).then(lis => lis.sort().join(", "))
-    const moved = await base_p.moveToDir(Deno.cwd())
+    const moved = await base_p.moveInto(Deno.cwd())
     const actual = await moved.iterdirMap(p => p.name).then(lis => lis.sort().join(", "))
     assertEquals(actual, expteced)
     await moved.move(base_p)
@@ -973,7 +973,7 @@ Deno.test("メソッド moveToDir: 指定したパスの下にファイル/デ�
     const base_p = new PathLike("test_data", "data_1", "text_1.txt")
     try {
       const target = new PathLike("test_data", "data_1", "before.txt")
-      const moved = await base_p.moveToDir(target)
+      const moved = await base_p.moveInto(target)
       await moved.move(base_p)
     } catch (error) {
       assertIsError(error, Error, "is not directory.")

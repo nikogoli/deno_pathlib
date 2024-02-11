@@ -446,7 +446,7 @@ export class PathLike {
     return dest_p
   }
 
-  async moveToDir(dest: string | PathLike, overwrite?: true) {
+  async moveInto(dest: string | PathLike, overwrite?: true) {
     const dest_dir = typeof dest == "string" ? new PathLike(dest) : dest
     if (dest_dir.is_dir() === false){
       throw new Error(`dest-path ${dest_dir.path} is not directory.`)  
