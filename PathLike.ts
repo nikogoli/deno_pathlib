@@ -573,13 +573,13 @@ export class PathLike {
     return Deno.readLinkSync(this.path)
   }
 
-  relativepath(baseInfo:{from:"file"|"dir"}, ...args: Array<string | PathLike>) {
+  resolveRelative(...args: Array<string | PathLike>) {
     const target_path = new PathLike(...args).path
     const base_p = this.is_absolute() ? this : new PathLike(this).resolve()
     let original_path: null | string = null
     if (base_p.path != Deno.cwd()){
       original_path = Deno.cwd()
-      Deno.chdir( baseInfo.from == "file" ? base_p.parent().path : base_p.path)
+      Deno.chdir( base_p.is_file() ? base_p.parent().path : base_p.path)
     }
     const resolved_target = new PathLike(target_path).resolve()
     if (original_path){

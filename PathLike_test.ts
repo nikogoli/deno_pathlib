@@ -608,35 +608,35 @@ Deno.test("メソッド dirDirs: ディレクトリ内のディレクトリの�
 })
 
 
-Deno.test("メソッド relativepath: PathLike を基準に相対パスを解決したPathLike を返す", async t => {
+Deno.test("メソッド resolveRelative: PathLike を基準に相対パスを解決したPathLike を返す", async t => {
   const base_p_abs = new PathLike(Deno.cwd(), "test_data", "data_2", "text_2.txt")
   const base_p_rel = new PathLike("test_data", "data_2", "text_2.txt")
   const expected = new PathLike(Deno.cwd(), "test_data", "data_1", "text_1.txt").path
 
   await t.step("OK: 絶対パスのファイルの PathLike から相対パスを正しく解決する", () => {
-    const actual = base_p_abs.relativepath({from:"file"}, "..", "data_1", "text_1.txt").path
+    const actual = base_p_abs.resolveRelative("..", "data_1", "text_1.txt").path
     assertEquals(actual, expected)
   })
 
   await t.step("OK: 相対パスのファイルの PathLike から相対パスを正しく解決する", () => {
-    const actual = base_p_rel.relativepath({from:"file"}, "..", "data_1", "text_1.txt").path
+    const actual = base_p_rel.resolveRelative("..", "data_1", "text_1.txt").path
     assertEquals(actual, expected)
   })
   
   await t.step("OK: 絶対パスのディレクトリの PathLike から相対パスを正しく解決する", () => {
-    const actual = base_p_abs.parent().relativepath({from:"dir"}, "..", "data_1", "text_1.txt").path
+    const actual = base_p_abs.parent().resolveRelative("..", "data_1", "text_1.txt").path
     assertEquals(actual, expected)
   })
 
   await t.step("OK: 相対パスのディレクトリの PathLike から相対パスを正しく解決する", () => {
-    const actual = base_p_rel.parent().relativepath({from:"dir"}, "..", "data_1", "text_1.txt").path
+    const actual = base_p_rel.parent().resolveRelative("..", "data_1", "text_1.txt").path
     assertEquals(actual, expected)
   })
 
   await t.step("OK: 絶対パスの場合、結果はカレントディレクトリに依存しない", () => {
     const cwd = new PathLike().cwd()
     Deno.chdir(cwd.parent().path)
-    const actual = base_p_abs.relativepath({from:"file"}, "..", "data_1", "text_1.txt").path
+    const actual = base_p_abs.resolveRelative("..", "data_1", "text_1.txt").path
     assertEquals(actual, expected)
     Deno.chdir(cwd.path)
   })
@@ -645,7 +645,7 @@ Deno.test("メソッド relativepath: PathLike を基準に相対パスを解決
     const cwd = new PathLike().cwd()
     Deno.chdir(cwd.parent().path)
     try {
-      const _actual = base_p_rel.relativepath({from:"file"}, "..", "data_1", "text_1.txt").path
+      const _actual = base_p_rel.resolveRelative("..", "data_1", "text_1.txt").path
     } catch (error) {
       assertIsError(error, Error, "指定されたパスが見つかりません。")
       Deno.chdir(cwd.path)
