@@ -169,12 +169,6 @@ export class PathLike {
   }
 
 
-  is_relative_to(target: string | PathLike): boolean {
-    const temp = typeof target == "string" ? new PathLike(target) : target
-    const is_not_match = temp.parts.map((part,idx) => part == this.parts[idx]).some(x => x === false)
-    return !is_not_match
-  }
-
   
   joinpath(...args: Array<string | PathLike>) {
     return new PathLike(this.path, ...args)

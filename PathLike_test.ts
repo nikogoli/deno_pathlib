@@ -375,37 +375,6 @@ Deno.test("メソッド is_absolute: 絶対パスかどうか (≒ anchor があ
 })
 
 
-Deno.test("メソッド is_relative_to: 入力パスがパスオブジェクトのパスと頭部分を共有しているかどうかを判定 ( = 入力パスの parts がパスオブジェクトの parts の先頭からの部分集合であるかどうか)", async (t) => {
-  await [...PathData.entries()].reduce( (pre, [label, data]) => pre.then( async () => {
-    const { windows, parent_path, parents_paths } = data
-    if (parents_paths.length == 0){
-      console.log(`${label} は no parent なのでスキップ`)
-      return
-    }
-    else if (parents_paths.length < 3  && parents_paths[0] == parent_path){
-      console.log(`${label} は parent が1つなのでスキップ`)
-      return
-    }
-    const head_3part = windows.split("\\").slice(0,3).join("\\")
-    const head_3part_with_typo = head_3part.slice(0,-1)
-
-    const base = new PathLike(windows)
-    // string で入力しても内部では PurePathLike のインスタンスに変換して処理されるので、入力タイプの違いはチェックしない
-    await t.step(`OK: ${label} に対して ${head_3part} は true`, () => {
-      assertEquals(base.is_relative_to(head_3part), true)
-    })
-
-    await t.step(`OK: ${label} に対して ${head_3part_with_typo} は false`, () => {
-      assertEquals(base.is_relative_to(head_3part_with_typo), false)
-    })
-
-    await t.step(`OK: ${label} に対して Users\\piyo は false`, () => {
-      assertEquals(base.is_relative_to("Users\\piyo"), false)
-    })
-  }), Promise.resolve())
-})
-
-
 Deno.test("メソッド joinpath: 入力した string や パスオブジェクトのパスを結合した新しいパスオブジェクトを返す", async (t) => {
   await [...PathData.entries()].reduce( (pre, [label, data]) => pre.then( async () => {
       const { windows, parts } = data
