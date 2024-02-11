@@ -505,10 +505,10 @@ export class PathLike {
 
     if (option?.mode == "x"){
       try {
-        const _x = this.statSync()
+        const _x = await this.stat()
         throw new Error(`Path '${this.path}' already exists.`)
       } catch (_error) {
-        return Deno.openSync(this.path, {...opt, write: true, create:true})
+        return await Deno.open(this.path, {...opt, write: true, create:true})
       }    
     } else {
       return await Deno.open(this.path, opt)
