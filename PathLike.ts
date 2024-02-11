@@ -758,24 +758,7 @@ export class PathLike {
     await Deno.writeTextFile(this.path, data, opt)
   }
 
-  async write_JSON(
-    // deno-lint-ignore no-explicit-any
-    data: any,
-    option?: {
-      mode? : "x" | "a"
-      create?: false,
-      createNew?: true,
-      PermissionMode?: number,
-      // deno-lint-ignore no-explicit-any
-      repalcer?: (this: any, key: string, value: any) => any
-      space?: string | number
-    }
-  ) {
-    const { repalcer, space } = option ? option : {repalcer: undefined, space:undefined}
-    const j_data = JSON.stringify(data, repalcer, space)
-    await this.write_text(j_data, option)
-  }
-
+  
   write_textSync(
     data: string,
     option?: {
@@ -799,6 +782,26 @@ export class PathLike {
     }
     Deno.writeTextFileSync(this.path, data, opt)
   }
+
+
+  async write_JSON(
+    // deno-lint-ignore no-explicit-any
+    data: any,
+    option?: {
+      mode? : "x" | "a"
+      create?: false,
+      createNew?: true,
+      PermissionMode?: number,
+      // deno-lint-ignore no-explicit-any
+      repalcer?: (this: any, key: string, value: any) => any
+      space?: string | number
+    }
+  ) {
+    const { repalcer, space } = option ? option : {repalcer: undefined, space:undefined}
+    const j_data = JSON.stringify(data, repalcer, space)
+    await this.write_text(j_data, option)
+  }
+
 
   write_JSONSync(
     // deno-lint-ignore no-explicit-any
