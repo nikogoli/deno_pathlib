@@ -343,7 +343,7 @@ export class PathLike {
   }
 
   async iterdirFind (
-    callbackSyncFunc: (value: PathLike, index?:number) => boolean | Promise<boolean>,
+    callbackAsyncFunc: (value: PathLike, index?:number) => boolean | Promise<boolean>,
     type: "file" | "dir" | "both" = "file"
   ) {
     let found: PathLike | undefined = undefined
@@ -357,7 +357,7 @@ export class PathLike {
         ){
           const p = this.joinpath(entry.name)
           p.#set_info(isDirectory, isFile, isSymlink)
-          const is_ok = await callbackSyncFunc(p, i++)
+          const is_ok = await callbackAsyncFunc(p, i++)
           if (is_ok){ found = p }
         }
       }
@@ -366,7 +366,7 @@ export class PathLike {
   }
 
   async iterdirSome (
-    callbackSyncFunc: (value: PathLike, index?:number) => boolean | Promise<boolean>,
+    callbackAsyncFunc: (value: PathLike, index?:number) => boolean | Promise<boolean>,
     type: "file" | "dir" | "both" = "file"
   ) {
     let is_hit = false
@@ -379,7 +379,7 @@ export class PathLike {
       ){
         const p = this.joinpath(entry.name)
         p.#set_info(isDirectory, isFile, isSymlink)
-        const is_ok = await callbackSyncFunc(p, i++)
+        const is_ok = await callbackAsyncFunc(p, i++)
         if (is_ok && is_hit == false){
           is_hit = true
         }
@@ -389,7 +389,7 @@ export class PathLike {
   }
 
   async iterdirEvery (
-    callbackSyncFunc: (value: PathLike, index?:number) => boolean | Promise<boolean>,
+    callbackAsyncFunc: (value: PathLike, index?:number) => boolean | Promise<boolean>,
     type: "file" | "dir" | "both" = "file"
   ) {
     let all_is_true = true
@@ -402,7 +402,7 @@ export class PathLike {
       ){
         const p = this.joinpath(entry.name)
         p.#set_info(isDirectory, isFile, isSymlink)
-        const is_ok = await callbackSyncFunc(p, i++)
+        const is_ok = await callbackAsyncFunc(p, i++)
         if (is_ok == false && all_is_true == true){
           all_is_true = false
         }
