@@ -525,7 +525,7 @@ Deno.test("メソッド copy: ファイル/ディレクトリをコピーして�
     const copied = await base_p.copy(target)
     const actual = await copied.iterdirMap(p => p.name).then(lis => lis.sort().join(", "))
     assertEquals(actual, expteced)
-    await copied.remove({recursive:true})
+    await copied.remove({removeNonEmptyDir:true})
   })
 })
 
@@ -545,7 +545,7 @@ Deno.test("メソッド ensureDir: DenoFS.ensureDir() を実行する", async t 
     await dir_target.ensureDir()
     const is_exist = await dir_target.exists()
     assertNotEquals(is_exist, false)
-    await new PathLike("test_data", "data_3").remove({recursive:true})
+    await new PathLike("test_data", "data_3").remove({removeNonEmptyDir:true})
   })
 
   await t.step("OK: is_file が true の場合はその親ディレクトリを ensureDir する", async () => {
@@ -553,7 +553,7 @@ Deno.test("メソッド ensureDir: DenoFS.ensureDir() を実行する", async t 
     const par_dit = fl_target.parent()
     const is_exist = await par_dit.exists()
     assertNotEquals(is_exist, false)
-    await new PathLike("test_data", "data_3").remove({recursive:true})
+    await new PathLike("test_data", "data_3").remove({removeNonEmptyDir:true})
   })
 })
 

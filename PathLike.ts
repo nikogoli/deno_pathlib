@@ -642,8 +642,9 @@ export class PathLike {
     return resolved
   }
 
-  async remove(options?: Deno.RemoveOptions) {
-    await Deno.remove(this.path, options)
+  async remove(options?: {removeNonEmptyDir: true}) {
+    const opt = options?.removeNonEmptyDir ? {recursive: true} : undefined
+    await Deno.remove(this.path, opt)
   }
 
   removeSync() {
