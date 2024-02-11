@@ -647,8 +647,9 @@ export class PathLike {
     await Deno.remove(this.path, opt)
   }
 
-  removeSync() {
-    Deno.removeSync(this.path)
+  removeSync(options?: {removeNonEmptyDir: true}) {
+    const opt = options?.removeNonEmptyDir ? {recursive: true} : undefined
+    Deno.removeSync(this.path, opt)
   }
 
   async symlink(
