@@ -181,25 +181,6 @@ export class PathLike {
   }
 
 
-  relative_to(target: string | PathLike) {
-    const temp = typeof target == "string" ? new PathLike(target) : target
-    if (this.is_absolute() == temp.is_absolute()){
-      const is_not_match = temp.parts.map((part,idx) => part == this.parts[idx]).some(x => x === false)
-      if (is_not_match == false){
-        if (this.path == temp.path){
-          return new PathLike(".")
-        } else {
-          const sub_parts = this.parts.filter(x => temp.parts.includes(x) == false)
-          return new PathLike(...sub_parts)
-        }
-      } else {
-        throw new Error(`'${this.path}' is not in the subpath of '${temp.path}'`)
-      }
-    } else {
-      throw new Error("One path is relative and the other absolute.")
-    }
-  }
-
 
   with_name(name:string) {
     if (this.name == ""){

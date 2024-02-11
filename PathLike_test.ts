@@ -410,52 +410,6 @@ Deno.test("メソッド match: (win表現の)正規表現がマッチするか�
 })
 
 
-Deno.test("メソッド relative_to: 入力パスがパスオブジェクトのパスと頭部分を共有しているならそれより下部のパスから新しいパスオブジェクトを作成して返す", async (t) => {
-  await [...PathData.entries()].reduce( (pre, [label, data]) => pre.then( async () => {
-    const { windows, parent_path, parents_paths } = data
-      if (parents_paths.length == 0){
-        console.log(`${label} は no parent なのでスキップ`)
-        return
-      }
-      else if (parents_paths.length < 3  && parents_paths[0] == parent_path){
-        console.log(`${label} は parent が ${parents_paths.length}個なのでスキップ`)
-        return
-      }
-      else {
-        const head_3part = windows.split("\\").slice(0,3).join("\\")
-        const head_3part_with_typo = head_3part.slice(0,-1)
-        const expected = windows.split("\\").slice(3).join("\\")
-        const base = new PathLike(windows)
-
-        await t.step(`OK: ${label} を ${head_3part} の相対パス化したものが ${expected} に等しい`, () => {
-          assertEquals(base.relative_to(head_3part).path, expected)
-        })
-        
-        await t.step(`Fail-OK: ${label} の ${head_3part_with_typo} による相対パス化は不一致によってエラー`, () => {
-          try {
-            base.relative_to(head_3part_with_typo)
-            throw new Error("No Error")
-          } catch (error) {
-            assertIsError(error, Error, "is not in the subpath of")
-          }
-        })        
-      }
-    }), Promise.resolve()
-  )
-
-  const { windows:abs_win } = PathData.get("絶対")!
-  const { windows:rel_win } = PathData.get("相対")!
-  await t.step(`Fail-OK: 適用対象とインプットの絶対--相対が不一致の場合はエラー`, () => {
-    try {
-      new PathLike(abs_win).relative_to(rel_win)
-      throw new Error("No Error")
-    } catch (error) {
-      assertIsError(error, Error, "One path is relative and the other absolute.")
-    }
-  })
-})
-
-
 Deno.test("メソッド with_name: name を差し替えたパスによるパスオブジェクトを返す", async (t) => {
   const new_name = "new_name.txt"
   await [...PathData.entries()].reduce( (pre, [label, data]) => pre.then( async () => {
