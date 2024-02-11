@@ -652,21 +652,6 @@ export class PathLike {
     Deno.removeSync(this.path, opt)
   }
 
-  async symlink(
-    link_to:string | PathLike,
-    type: "file" | "dir"
-  ) {
-    const link_path = new PathLike(link_to).path
-    await Deno.symlink(link_path, this.path, {type})
-  }
-
-  symlinkSync(
-    link_to:string | PathLike,
-    type: "file" | "dir"
-  ) {
-    const link_path = new PathLike(link_to).path
-    Deno.symlinkSync(link_path, this.path, {type})
-  }
 
   async touch(option?:{
     mode?:number,
