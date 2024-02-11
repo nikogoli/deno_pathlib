@@ -154,34 +154,54 @@ export class PathLike {
   }
 
 
+  /**
+   * このパスをPOSIX 形式に変換した文字列を返す
+   */
   as_posix() {
     return this.path.replaceAll("\\", "/")
   }
 
 
+  /**
+   * このパスを絶対パス かつ FileURL 形式に変換した文字列を返す
+   */
   as_uri() {
     return DenoPath.toFileUrl(this.resolve().path).href
   }
 
 
+
+  /**
+   * このパスが絶対パスなら true, 相対パスなら false を返す
+   */
   is_absolute(){
     return DenoPath.isAbsolute(this.path)
   }
 
 
-  
+  /**
+   * このパスの末尾に args を順番に結合した、新しい PathLike のインスタンスを返す
+   * @param args パスに追加したい文字列あるいは PathLike インスタンスの配列
+   */
   joinpath(...args: Array<string | PathLike>) {
     return new PathLike(this.path, ...args)
   }
 
 
+  /**
+   * このパスが与えられた pattern に一致する場合は true, 一致しない場合は false を返す
+   * @param pattern 一致するかどうかを調べる対象の文字列あるいは RegExp
+   */
   match(pattern: string | RegExp) {
     const reg_ptn = (pattern instanceof RegExp) ? pattern : DenoPath.globToRegExp(pattern)
     return this.path.match(reg_ptn) !== null
   }
 
 
-
+  /**
+   * このパスの name 部分を与えられた name に置き換えた、新しい PathLike インスタンスを返す
+   * @param name 新しい名前
+   */
   with_name(name:string) {
     if (this.name == ""){
       throw new Error("Cannot replace when original path's name is empty")
@@ -194,6 +214,10 @@ export class PathLike {
   }
 
 
+  /**
+   * このパスの stem 部分を与えられた stem に置き換えた、新しい PathLike インスタンスを返す
+   * @param stem 新しい stem
+   */
   with_stem(stem:string) {
     if (this.stem == ""){
       throw new Error("Cannot replace when original path's stem is empty")
@@ -205,6 +229,11 @@ export class PathLike {
     }
   }
 
+
+  /**
+   * このパスの suffix 部分を与えられた suffix に置き換えた、新しい PathLike インスタンスを返す
+   * @param suffix 新しい識別子
+   */
   with_suffix(suffix:string){
     if (this.name == ""){
       throw new Error("Cannot replace when original path's name is empty")
@@ -217,8 +246,17 @@ export class PathLike {
     }
   }
 
+
   //  ↑ PurePath-method   ↓ Path-method
 
+
+  /**
+   * このパスが指す対象を与えられた dest に複製し、複製後のパスを示す PathLike インスタンスを返す。
+   * 複製先がすでに存在する場合は error を投げる
+   * - `{overwrite:true}`が与えられた場合は error を投げずに上書きを行う
+   * @param dest 複製後のパスを示す文字列あるいは PathLike インスタンス
+   * @param options 
+   */
   async copy(dest: string | PathLike, options?: {overwrite?: true, preserveTimestamps?: true}) {
     const dest_p = typeof dest == "string" ? new PathLike(dest) : dest
     const opt: Parameters<typeof DenoFS.copy>[2] = options
@@ -226,18 +264,38 @@ export class PathLike {
     return dest_p
   }
 
+  
+  /**
+   * カレントディレクトリのパスを示す PathLike インスタンスを返す
+   */
   cwd() {
     return new PathLike(Deno.cwd())
   }
 
+
+  /**
+   * Deno.chmod を用い、このパスが指すファイルのモードとアクセス権限を変更する
+   * @param mode 
+   */
   async chmod(mode:number) {
     await Deno.chmod(this.path, mode)
   }
 
+
+  /**
+   * Deno.chmodSync を用い、このパスが指すファイルのモードとアクセス権限を同期的に変更する
+   * @param mode 
+   */
   chmodSync(mode: number){
     Deno.chmodSync(this.path, mode)
   }
 
+
+  /**
+   * このパスが指す対象の存在を調べ、存在するならその PathLike インスタンス, 存在しないなら false を返す。
+   * - `throw_error=true`が与えられたとき、存在しない場合は false を返す代わりに error を投げる
+   * @param throw_error 存在しない場合に error を投げるかどうか
+   */
   async exists(throw_error?: true) {
     try {
       const _x = await this.stat()
@@ -251,7 +309,11 @@ export class PathLike {
     }
   }
 
-
+  /**
+   * このパスが指す対象の存在を同期的に調べ、存在するならその PathLike インスタンス, 存在しないなら false を返す。
+   * - `throw_error=true`が与えられたとき、存在しない場合は false を返す代わりに error を投げる
+   * @param throw_error 存在しない場合に error を投げるかどうか
+   */
   existsSync(throw_error?: true) {
     try {
       const _x = this.stat()
@@ -266,19 +328,36 @@ export class PathLike {
   }
 
 
+  /**
+   * このパスが指すディレクトリが存在するかどうかを調べ、存在しない場合はディレクトリを作成し、その PathLike インスタンスを返す。
+   * - `{is_file:true}`が与えられたときは、自身の親のパスが示すディレクトリを対象にする
+   * @param options is_file: 自身ではなく親のパスを用いるかどうか
+   */
   async ensureDir(options?:{is_file: true}) {
     await DenoFS.ensureDir(options?.is_file ? this.parent().path : this.path)
     return this
   }
 
+
+  /**
+   * このパスが指すディレクトリを調べ、その直下にあるファイルを指す PathLike インスタンスの配列を返す
+   */
   async dirFiles() {
     return await this.iterdirFilter(p => p.is_file())
   }
 
+
+  /**
+   * このパスが指すディレクトリを調べ、その直下にあるディレクトリを指す PathLike インスタンスの配列を返す
+   */
   async dirDirs() {
     return await this.iterdirFilter(p => p.is_dir())
   }
 
+
+  /**
+   * このパスが指す対象がディレクトリであれば true, それ以外ならば false を返す
+   */
   is_dir() {
     if (this.#_is_dir){
       return this.#_is_dir
@@ -289,6 +368,10 @@ export class PathLike {
     }
   }
 
+
+  /**
+   * このパスが指す対象がファイルであれば true, それ以外ならば false を返す
+   */
   is_file() {
     if (this.#_is_file){
       return this.#_is_file
@@ -299,6 +382,10 @@ export class PathLike {
     }
   }
 
+
+  /**
+   * このパスが指す対象がシンボリックリンクであれば true, それ以外ならば false を返す
+   */
   is_symlink() {
     if (this.#_is_symlink){
       return this.#_is_symlink
@@ -309,10 +396,20 @@ export class PathLike {
     }
   }
 
+
+  /**
+   * このパスを対象に`Deno.readDir()`を実行し Deno.DirEntry の async iterable を返す
+   */
   iterdir() {
     return Deno.readDir(this.path)
   }
 
+
+  /**
+   * このパスが指すディレクトリ直下の要素に対して与えられた callback を順番に非同期的に実行し、
+   * それらの結果が含まれた配列を返す
+   * @param callbackAsyncFunc ディレクトリの中身に対して実行する関数。非同期でなくても構わない
+   */
   async iterdirMap<T>(
     callbackAsyncFunc: (value: PathLike, index: number) => NotPromise<T> | Promise<T>,
   ): Promise<Array<T>> {
@@ -327,6 +424,12 @@ export class PathLike {
     return outputs
   }
 
+
+  /**
+   * このパスが指すディレクトリ直下の要素に対して与えられた callback を順番に非同期的に実行し、
+   * その結果が true になった PathLike のインスタンスのみからなる配列を返す
+   * @param callbackAsyncFunc ディレクトリの中身に対して実行する関数。非同期でなくても構わない
+   */
   async iterdirFilter(
     callbackAsyncFunc: (value: PathLike, index: number) => boolean | Promise<boolean>,
   ) {
@@ -342,6 +445,13 @@ export class PathLike {
     return outputs
   }
 
+
+  /**
+   * このパスが指すディレクトリ直下の要素に対して与えられた callback を順番に非同期的に実行し、
+   * その結果が最初に true になった PathLike のインスタンスを返す
+   * @param callbackAsyncFunc ディレクトリの中身に対して実行する関数。非同期でなくても構わない
+   * @param type callback を実行する対象の絞り込み。デフォルトは`"file"`
+   */
   async iterdirFind (
     callbackAsyncFunc: (value: PathLike, index?:number) => boolean | Promise<boolean>,
     type: "file" | "dir" | "both" = "file"
@@ -365,6 +475,13 @@ export class PathLike {
     return found
   }
 
+
+  /**
+   * このパスが指すディレクトリ直下の要素に対して与えられた callback を順番に非同期的に実行し、
+   * 一つでも結果が true になったものがあれば true, すべての結果が false であれば false を返す。
+   * @param callbackAsyncFunc ディレクトリの中身に対して実行する関数。非同期でなくても構わない
+   * @param type callback を実行する対象の絞り込み。デフォルトは`"file"`
+   */
   async iterdirSome (
     callbackAsyncFunc: (value: PathLike, index?:number) => boolean | Promise<boolean>,
     type: "file" | "dir" | "both" = "file"
@@ -388,6 +505,13 @@ export class PathLike {
     return is_hit
   }
 
+
+  /**
+   * このパスが指すディレクトリ直下の要素に対して与えられた callback を順番に非同期的に実行し、
+   * 結果がすべて true であれば true, 一つでも false になった場合は false を返す。
+   * @param callbackAsyncFunc ディレクトリの中身に対して実行する関数。非同期でなくても構わない
+   * @param type callback を実行する対象の絞り込み。デフォルトは`"file"`
+   */
   async iterdirEvery (
     callbackAsyncFunc: (value: PathLike, index?:number) => boolean | Promise<boolean>,
     type: "file" | "dir" | "both" = "file"
@@ -411,22 +535,48 @@ export class PathLike {
     return all_is_true
   }
 
+
+  /**
+   * このパスが指す対象に同期的に Deno.statSync を実行し、Deno.FileInfo を返す。
+   * 対象がシンボリックリンクであった場合、リンク先における Deno.FileInfo を返す。
+   */
   statSync() {
     return Deno.statSync(this.path)
   }
 
+
+  /**
+   * このパスが指す対象に Deno.stat を実行し、Deno.FileInfo を返す。
+   * 対象がシンボリックリンクであった場合、リンク先における Deno.FileInfo を返す。
+   */
   async stat() {
     return await Deno.stat(this.path)
   }
 
+
+  /**
+   * このパスが指す対象に同期的に Deno.lstatSync を実行し、Deno.FileInfo を返す。
+   * 対象がシンボリックリンクであった場合、シンボリックリンクにおける Deno.FileInfo を返す。
+   */
   lstatSync() {
     return Deno.lstatSync(this.path)
   }
 
+
+  /**
+   * このパスが指す対象に Deno.lstat を実行し、Deno.FileInfo を返す。
+   * 対象がシンボリックリンクであった場合、シンボリックリンクにおける Deno.FileInfo を返す。
+   */
   async lstat() {
     return await Deno.lstat(this.path)
   }
 
+
+  /**
+   * このパスにディレクトリを同期的に作成する。すでにディレクトリが存在する場は error を投げる。
+   * - `{recursive: true}`が与えられた場合、必要に応じて親ディレクトリも新規に作成する。
+   * @param option Deno.MkdirOptions
+   */
   mkdirSync(
     option?: {mode?:number, recursive?: boolean}
   ){
@@ -434,6 +584,12 @@ export class PathLike {
     Deno.mkdirSync(this.path, opt)
   }
 
+
+  /**
+   * このパスにディレクトリを作成する。すでにディレクトリが存在する場は error を投げる。
+   * - `{recursive: true}`が与えられた場合、必要に応じて親ディレクトリも新規に作成する。
+   * @param option Deno.MkdirOptions
+   */
   async mkdir(
     option?: {mode?:number, recursive?: boolean}
   ){
@@ -441,12 +597,28 @@ export class PathLike {
     await Deno.mkdir(this.path, opt)
   }
 
+
+  /**
+   * このパスが指す対象を与えられた dest に移動させ、移動後のパスを示す PathLike インスタンスを返す。
+   * 移動先がすでに存在する場合は error を投げる
+   * - `overwrite=true`のとき、移動先がすでに存在する場合は error を投げずに上書きを行う
+   * @param dest 移動後のパスを示す文字列あるいは PathLike インスタンス
+   * @param overwrite 上書きを許容するかどうか
+   */
   async move(dest: string | PathLike, overwrite?: true) {
     const dest_p = typeof dest == "string" ? new PathLike(dest) : dest
     await DenoFS.move(this.path, dest_p.path, {overwrite})
     return dest_p
   }
 
+
+  /**
+   * このパスが指す対象を与えられた dest の直下に移動させ、移動後のパスを示す PathLike インスタンスを返す。
+   * dest が指す対象がディレクトリではない場合、および移動先がすでに存在する場合は error を投げる
+   * - `overwrite=true`のとき、移動先がすでに存在する場合は error を投げずに上書きを行う。
+   * @param dest 移動後の親となるディレクトリのパスを示す文字列あるいは PathLike インスタンス
+   * @param overwrite 上書きを許容するかどうか
+   */
   async moveInto(dest: string | PathLike, overwrite?: true) {
     const dest_dir = typeof dest == "string" ? new PathLike(dest) : dest
     if (dest_dir.is_dir() === false){
@@ -457,6 +629,11 @@ export class PathLike {
     return dest_p
   }
 
+
+  /**
+   * このパスが指す対象に対して同期的に Deno.openSync を実行し、Deno.FsFile インスタンスを返す
+   * @param option 
+   */
   openSync(option?: {
     mode? : "r" | "w" | "x" | "a",
     truncate?: true,
@@ -486,6 +663,11 @@ export class PathLike {
     }
   }
   
+
+  /**
+   * このパスが指す対象に対して Deno.open を実行し、Deno.FsFile インスタンスを返す
+   * @param option 
+   */
   async open(option?: {
     mode? : "r" | "w" | "x" | "a",
     truncate?: true,
@@ -515,14 +697,27 @@ export class PathLike {
     }
   }
 
+
+  /**
+   * このパスが指す対象に対して同期的に Deno.readFileSync を実行し、Uint8Array を返す
+   */
   read_bytesSync() {
     return Deno.readFileSync(this.path)
   }
 
+
+  /**
+   * このパスが指す対象に対して Deno.readFile を実行し、Uint8Array を返す
+   */
   async read_bytes() {
     return await Deno.readFile(this.path)
   }
 
+
+  /**
+   * このパスが指す対象に対して Deno.readTextFile を実行し、文字列を返す
+   * @param encoding エンコード形式の指定。デフォルトは`"utf-8"`
+   */
   async read_text(encoding?: "utf-8" | string) {
     if (encoding && encoding != "utf-8"){
       const Decoder = new TextDecoder(encoding)
@@ -532,6 +727,11 @@ export class PathLike {
     }
   }
 
+
+  /**
+   * このパスが指す対象に対して同期的に Deno.readTextFileSync を実行し、文字列を返す
+   * @param encoding エンコード形式の指定。デフォルトは`"utf-8"`
+   */
   read_textSync(encoding?: "utf-8" | string) {
     if (encoding && encoding != "utf-8"){
       const Decoder = new TextDecoder(encoding)
@@ -542,6 +742,11 @@ export class PathLike {
     }
   }
 
+
+  /**
+   * このパスが指す対象に対して Deno.readTextFile を実行し、その結果を改行文字で分割した文字列の配列を返す
+   * @param encoding エンコード形式の指定。デフォルトは`"utf-8"`
+   */
   async read_lines(length?: number, encoding?: "utf-8" | string) {
     const text = await this.read_text(encoding)
     // ファイルの実態を確認しないので例外に弱く、使えない
@@ -550,29 +755,55 @@ export class PathLike {
     return (length) ? lines.slice(0, length) : lines
   }
 
+
+  /**
+   * このパスが指す対象に対して同期的に Deno.readTextFileSync を実行し、その結果を改行文字で分割した文字列の配列を返す
+   * @param encoding エンコード形式の指定。デフォルトは`"utf-8"`
+   */
   read_linesSync(length?: number, encoding?: "utf-8" | string) {
     const text = this.read_textSync(encoding)
     const lines = text.split(/\r\n|\r|\n/)
     return (length) ? lines.slice(0, length) : lines
   }
 
+
+  /**
+   * このパスが指す対象に対して Deno.readTextFile を実行し、その結果にさらに JSON.parse() を実行した結果を返す
+   */
   async read_JSON<T>() {
     return await Deno.readTextFile(this.path).then(tx => JSON.parse(tx) as T)
   }
 
+
+  /**
+   * このパスが指す対象に対して同期的に Deno.readTextFileSync を実行し、その結果にさらに JSON.parse() を実行した結果を返す
+   */
   read_JSONSync<T>() {
     const j = Deno.readTextFileSync(this.path)
     return JSON.parse(j) as T
   }
 
+
+  /**
+   * このパスが指すシンボリックリンクをたどり、リンク先へのパスを文字列として返す
+   */
   async readlink() {
     return await Deno.readLink(this.path)
   }
 
+
+  /**
+   * このパスが指すシンボリックリンクを同期的にたどり、リンク先へのパスを文字列として返す
+   */
   readlinkSync() {
     return Deno.readLinkSync(this.path)
   }
 
+
+  /**
+   * このパスを基準にして args として与えられた相対パスを解決し、その PathLike インスタンスを返す
+   * @param args 解決したい相対パスを構成する文字列あるいは PathLike インスタンスの配列
+   */
   resolveRelative(...args: Array<string | PathLike>) {
     const target_path = new PathLike(...args).path
     const base_p = this.is_absolute() ? this : new PathLike(this).resolve()
@@ -588,6 +819,12 @@ export class PathLike {
     return resolved_target
   }
 
+
+  /**
+   * このパスが指す対象を、与えられた args から構成される新しいパスにリネーム(移動)する。
+   * リネーム先がすでに存在する場合は error を投げる。
+   * @param args リネーム先のパスを構成する文字列あるいは PathLike インスタンスの配列
+   */
   async rename(...args: Array<string | PathLike>) {
     const new_p = new PathLike(...args)
     try {
@@ -599,6 +836,12 @@ export class PathLike {
     throw new Error(`target ${new_p.path} already exists.`)
   }
 
+
+  /**
+   * このパスが指す対象を、与えられた args から構成される新しいパスに同期的にリネーム(移動)する。
+   * リネーム先がすでに存在する場合は error を投げる。
+   * @param args リネーム先のパスを構成する文字列あるいは PathLike インスタンスの配列
+   */
   renameSync(...args: Array<string | PathLike>) {
     const new_p = new PathLike(...args)
     try {
@@ -610,6 +853,12 @@ export class PathLike {
     throw new Error(`target ${new_p.path} already exists.`)
   }
 
+
+  /**
+   * このパスが指す対象の name を与えられた new_name に変更する。
+   * リネーム先がすでに存在する場合は error を投げる。
+   * @param new_name 新しい name
+   */
   async renameTo(new_name:string) {
     const new_p = this.with_name(new_name)
     try {
@@ -622,18 +871,35 @@ export class PathLike {
   }
 
 
+  /**
+   * このパスが指す対象を、与えられた args から構成される新しいパスにリネーム(移動)する。
+   * リネーム先がすでに存在する場合は上書きする。
+   * @param args リネーム先のパスを構成する文字列あるいは PathLike インスタンスの配列
+   */
   async replace(...args: Array<string | PathLike>) {
     const new_p = new PathLike(...args)
     await Deno.rename(this.path, new_p.path)
     return new_p 
   }
 
+
+  /**
+   * このパスが指す対象を、与えられた args から構成される新しいパスに同期的にリネーム(移動)する。
+   * リネーム先がすでに存在する場合は上書きする。
+   * @param args リネーム先のパスを構成する文字列あるいは PathLike インスタンスの配列
+   */
   replaceSync(...args: Array<string | PathLike>) {
     const new_p = new PathLike(...args)
     Deno.renameSync(this.path, new_p.path)
     return new_p
   }
 
+
+  /**
+   * このパスを絶対パスに変換し、そのパスを示す PathLike インスタンスを返す。
+   * - `strict=true`の場合、パスの対象が存在しない場合は error を投げる
+   * @param strict パスが示す対象の存在を確認するかどうか
+   */
   resolve(strict?: true) {
     const resolved = new PathLike(DenoPath.resolve(this.path))
     if (strict){
@@ -642,17 +908,35 @@ export class PathLike {
     return resolved
   }
 
+
+  /**
+   * このパスが指す対象を削除する。対象がディレクトリかつ中身が存在する場合は error を投げる
+   * - `{removeNonEmptyDir: true}`が与えられたとき、対象が空でないディレクトリの場合でも削除を行う
+   * @param options removeNonEmptyDir：空でないディレクトリでも削除するかどうか
+   */
   async remove(options?: {removeNonEmptyDir: true}) {
     const opt = options?.removeNonEmptyDir ? {recursive: true} : undefined
     await Deno.remove(this.path, opt)
   }
 
+
+  /**
+   * このパスが指す対象を同期的に削除する。対象がディレクトリかつ中身が存在する場合は error を投げる
+   * - `{removeNonEmptyDir: true}`が与えられたとき、対象が空でないディレクトリの場合でも削除を行う
+   * @param options removeNonEmptyDir：空でないディレクトリでも削除するかどうか
+   */
   removeSync(options?: {removeNonEmptyDir: true}) {
     const opt = options?.removeNonEmptyDir ? {recursive: true} : undefined
     Deno.removeSync(this.path, opt)
   }
 
 
+  /**
+   * このパスが示す場所に空のファイルを作成する。
+   * - `mode`が与えられたとき、Deno.chmod(mode) を行う
+   * - `{exist_ok=false}`が与えられたとき、このパスが指す対象がすでに存在する場合は error を投げる
+   * @param option 
+   */
   async touch(option?:{
     mode?:number,
     exist_ok?:false
@@ -670,6 +954,12 @@ export class PathLike {
   }
 
 
+  /**
+   * このパスが示す場所に空のファイルを同期的に作成する
+   * - `mode`が与えられたとき、Deno.chmod(mode) を行う
+   * - `{exist_ok=false}`が与えられたとき、このパスが指す対象がすでに存在する場合は error を投げる
+   * @param option 
+   */
   touchSync(option? :{
     mode?:number,
     exist_ok?:false
@@ -686,6 +976,15 @@ export class PathLike {
     }
   }
 
+
+  /**
+   * このパスが指すファイルに与えられた data を上書きする。ファイルが存在しない場合は新規に作成する。
+   * - `{create: false}`あるいは`{mode: "x"}`が与えられた場合、ファイルが存在しない場合は error を投げる
+   * - `{createNew: true}`が与えられた場合、このパスが指すファイルが存在する場合は error を投げる
+   * - `{mode: "a"}`が与えられた場合、上書きではなく data を追加的に書き込む
+   * @param data ファイルに書き込む Unit8Array
+   * @param option 
+   */
   async write_bytes(
     data: Uint8Array,
     option?: {
@@ -710,6 +1009,15 @@ export class PathLike {
     await Deno.writeFile(this.path, data, opt)
   }
 
+
+  /**
+   * このパスが指すファイルに与えられた data を同期的に上書きする。ファイルが存在しない場合は新規に作成する。
+   * - `{create: false}`あるいは`{mode: "x"}`が与えられた場合、ファイルが存在しない場合は error を投げる
+   * - `{createNew: true}`が与えられた場合、このパスが指すファイルが存在する場合は error を投げる
+   * - `{mode: "a"}`が与えられた場合、上書きではなく data を追加的に書き込む
+   * @param data ファイルに書き込む Unit8Array
+   * @param option 
+   */
   write_bytesSync(
     data: Uint8Array,
     option?: {
@@ -734,6 +1042,15 @@ export class PathLike {
     Deno.writeFileSync(this.path, data, opt)
   }
 
+
+  /**
+   * このパスが指すファイルに与えられた data を上書きする。ファイルが存在しない場合は新規に作成する。
+   * - `{create: false}`あるいは`{mode: "x"}`が与えられた場合、ファイルが存在しない場合は error を投げる
+   * - `{createNew: true}`が与えられた場合、このパスが指すファイルが存在する場合は error を投げる
+   * - `{mode: "a"}`が与えられた場合、上書きではなく data を追加的に書き込む
+   * @param data ファイルに書き込む文字列
+   * @param option 
+   */
   async write_text(
     data: string,
     option?: {
@@ -758,7 +1075,15 @@ export class PathLike {
     await Deno.writeTextFile(this.path, data, opt)
   }
 
-  
+
+  /**
+   * このパスが指すファイルに与えられた data を同期的に上書きする。ファイルが存在しない場合は新規に作成する。
+   * - `{create: false}`あるいは`{mode: "x"}`が与えられた場合、ファイルが存在しない場合は error を投げる
+   * - `{createNew: true}`が与えられた場合、このパスが指すファイルが存在する場合は error を投げる
+   * - `{mode: "a"}`が与えられた場合、上書きではなく data を追加的に書き込む
+   * @param data ファイルに書き込む文字列
+   * @param option 
+   */
   write_textSync(
     data: string,
     option?: {
@@ -784,6 +1109,15 @@ export class PathLike {
   }
 
 
+  /**
+   * このパスが指すファイルに与えられた data を上書きする。ファイルが存在しない場合は新規に作成する。
+   * - `{create: false}`あるいは`{mode: "x"}`が与えられた場合、ファイルが存在しない場合は error を投げる
+   * - `{createNew: true}`が与えられた場合、このパスが指すファイルが存在する場合は error を投げる
+   * - `{mode: "a"}`が与えられた場合、上書きではなく data を追加的に書き込む
+   * - `replacer`および`space`が与えられた場合、それらは JSON.stringify() の引数となる
+   * @param data ファイルに書き込むオブジェクト
+   * @param option 
+   */
   async write_JSON(
     // deno-lint-ignore no-explicit-any
     data: any,
@@ -803,6 +1137,15 @@ export class PathLike {
   }
 
 
+  /**
+   * このパスが指すファイルに与えられた data を同期的に上書きする。ファイルが存在しない場合は新規に作成する。
+   * - `{create: false}`あるいは`{mode: "x"}`が与えられた場合、ファイルが存在しない場合は error を投げる
+   * - `{createNew: true}`が与えられた場合、このパスが指すファイルが存在する場合は error を投げる
+   * - `{mode: "a"}`が与えられた場合、上書きではなく data を追加的に書き込む
+   * - `replacer`および`space`が与えられた場合、それらは JSON.stringify() の引数となる
+   * @param data ファイルに書き込むオブジェクト
+   * @param option 
+   */
   write_JSONSync(
     // deno-lint-ignore no-explicit-any
     data: any,
