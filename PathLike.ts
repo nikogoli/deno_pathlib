@@ -1,5 +1,5 @@
-import * as DenoPath from "https://deno.land/std@0.170.0/path/mod.ts"
-import * as DenoFS from "https://deno.land/std@0.177.0/fs/mod.ts"
+import * as DenoPath from "jsr:@std/path@1.0.9"
+import * as DenoFS from "jsr:@std/fs@1.0.19"
 
 // deno-lint-ignore no-explicit-any
 type NotPromise<T> = T extends Promise<any> ? never : T
