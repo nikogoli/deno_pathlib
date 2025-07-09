@@ -1,6 +1,8 @@
 import * as DenoPath from "jsr:@std/path@1.0.9"
 import * as DenoFS from "jsr:@std/fs@1.0.19"
 
+import movetoTrash from "./funcs/movetoTrash.ts"
+
 // deno-lint-ignore no-explicit-any
 type NotPromise<T> = T extends Promise<any> ? never : T
 
@@ -937,8 +939,17 @@ export class PathLike {
    * @param options removeNonEmptyDir：空でないディレクトリでも削除するかどうか
    */
   async remove(options?: {removeNonEmptyDir: true}) {
-    const opt = options?.removeNonEmptyDir ? {recursive: true} : undefined
-    await Deno.remove(this.path, opt)
+    if (this.is_dir() && !options){
+      const not_empty = await this.iterdirFind(p => p.name ? true : false)
+      if (not_empty !== undefined){
+        throw new Error(`${this.name} は空ディレクトリではありません.`)
+      }
+    }
+    await movetoTrash(this.resolve().path)
+    .then(_x => this.exists())
+    .then(is_exists => {
+      if (is_exists){ throw new Error(`${this.path} の削除に失敗しました`) }
+    })
   }
 
 
@@ -948,8 +959,25 @@ export class PathLike {
    * @param options removeNonEmptyDir：空でないディレクトリでも削除するかどうか
    */
   removeSync(options?: {removeNonEmptyDir: true}) {
-    const opt = options?.removeNonEmptyDir ? {recursive: true} : undefined
-    Deno.removeSync(this.path, opt)
+    const del = () => {
+      movetoTrash(this.resolve().path)
+      .then(_x => this.exists())
+      .then(is_exists => {
+        if (is_exists){ throw new Error(`${this.path} の削除に失敗しました`) }
+      })
+    }
+
+    if (this.is_file()){
+      del()
+    } else {
+      this.iterdirFind(p => p.name ? true : false)
+      .then(not_empty => {
+        if (!options && not_empty !== undefined){
+          throw new Error(`${this.name} は空ディレクトリではありません.`)
+        }
+        del()
+      })
+    }
   }
 
 

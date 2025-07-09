@@ -1314,6 +1314,37 @@ Deno.test("メソッド renameTo: 名前を指定してリネームし新しい�
 })
 
 
+Deno.test("メソッド remove: PathLike をゴミ箱に移動する", async t => {
+  const base_dir = new PathLike(Deno.env.get("GitHubPath")!, "deno_pathlib", "test_data")
+  const new_dir_emp = await base_dir.joinpath("emp").ensureDir()
+  const new_dir_notemp = await base_dir.joinpath("not_emp").ensureDir()
+  const temp1_file = new_dir_notemp.joinpath("temp1.txt")
+  await temp1_file.write_text("")
+  const temp2_file = new_dir_notemp.joinpath("temp2.txt")
+  await temp2_file.write_text("")
+  
+  await t.step(`OK: 空ディレクトリを削除する`, async () => {
+    await new_dir_emp.remove()
+  })
+
+  await t.step(`Fail-OK: 空でないディレクトリを option なしで削除する場合はエラー`, async () => {
+    try {
+      await new_dir_notemp.remove()
+    } catch (error) {
+      assertIsError(error, Error, `${new_dir_notemp.name} は空ディレクトリではありません.`)
+    }
+  })
+
+  await t.step(`OK: ファイルを削除する`, async () => {
+    await temp1_file.remove()
+  })
+
+  await t.step(`OK: 空でないディレクトリを option ありで削除する`, async () => {
+    await new_dir_notemp.remove({removeNonEmptyDir: true})
+  })
+})
+
+
 Deno.test("メソッド resolve: 絶対パスに変更した PathLike を返す", async t => {
   const base_dir = new PathLike(Deno.env.get("GitHubPath")!, "deno_pathlib")
   const file = new PathLike("test_data", "data_1", "text_1.txt")
