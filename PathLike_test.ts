@@ -1364,6 +1364,68 @@ Deno.test("メソッド resolve: 絶対パスに変更した PathLike を返す"
   })
 })
 
+
+Deno.test("メソッド slicePath: 指定した部分でスライスしたパスを返す", async t => {
+  const base_dir = new PathLike(Deno.env.get("GitHubPath")!, "deno_pathlib")
+  const file = base_dir.joinpath("test_data", "data_1", "text_1.txt")
+  const compared = new PathLike("deno_pathlib", "test_data", "data_1", "text_1.txt")
+
+  await t.step(`OK: インデックス指定でスライス (始点のみ)`, () => {
+    assertEquals(file.slicePath(6), compared.path)
+  })
+  await t.step(`OK: インデックス指定でスライス (双方)`, () => {
+    assertEquals(file.slicePath(6, 9), compared.parent().path)
+  })
+  await t.step(`OK: インデックス指定でスライス (終点:負値)`, () => {
+    assertEquals(file.slicePath(6, -1), compared.parent().path)
+  })
+  await t.step(`OK: インデックス指定でスライス (双方:負値)`, () => {
+    assertEquals(file.slicePath(-3, -1), compared.parent().path)
+  })
+
+  await t.step(`Fail-OK: インデックス指定のスライスで始点が超過しているとエラー`, () => {
+    try {
+      file.slicePath(11)
+    } catch (error) {
+      assertIsError(error, Error, `11 は parts.length (${file.parts.length}) を超過しています.`)
+    }
+  })
+  await t.step(`Fail-OK: インデックス指定のスライスで始点(負値)が超過しているとエラー`, () => {
+    try {
+      file.slicePath(-10, -1)
+    } catch (error) {
+      assertIsError(error, Error, `-10 は parts.length (${file.parts.length}) を超過しています.`)
+    }
+  })
+
+  await t.step(`OK: 内容指定でスライス (始点のみ)`, () => {
+    assertEquals(file.slicePath("deno_pathlib"), compared.path)
+  })
+  await t.step(`OK: 内容指定でスライス (双方)`, () => {
+    assertEquals(file.slicePath("deno_pathlib", "data_1"), compared.parent().path)
+  })
+
+  await t.step(`Fail-OK: 内容指定のスライスで存在しない part だとエラー (始点)`, () => {
+    try {
+      file.slicePath("deno_path")
+    } catch (error) {
+      assertIsError(error, Error, `'deno_path' は parts には含まれていません.`)
+    }
+  })
+  await t.step(`Fail-OK: 内容指定のスライスで存在しない part だとエラー (終点)`, () => {
+    try {
+      file.slicePath("deno_pathlib", "data")
+    } catch (error) {
+      assertIsError(error, Error, `'data' は parts には含まれていません.`)
+    }
+  })
+
+  await t.step(`OK: 内容およびインデックス指定の混在でスライス (双方)`, () => {
+    assertEquals(file.slicePath("deno_pathlib", -1), compared.parent().path)
+  })
+})
+
+
 /* windows でシンボリックリンク作成を行うには、管理者で cmd を立ち上げる必要がある
 
 Deno.test("メソッド symlink: 現在のパスに指定したパスへのシンボリックリンクを作成する", async t => {

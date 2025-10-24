@@ -979,6 +979,41 @@ export class PathLike {
       })
     }
   }
+  
+
+  /**
+   * path-part の内容あるいはそのインデックスを指定してスライスしたパスを返す
+   * - インデックスは負値も可 (ただし負値 の start は、.slice() とは異なり始点そのものを指定する)
+   * @param start (string | number)：スライス後のパスの先頭となる、始点部分の path-part の内容 or その index
+   * @param end? (string | number)：スライス後のパスの末尾となる、終点部分の path-part の内容 or その index
+   */
+  slicePath(start: string|number, end?: string|number) {
+    const checkNumber = (num: number, type: "start"|"end") => {
+      if ( (num > 0 && num > this.parts.length) || (num < 0 && num*-1 > this.parts.length)) {
+        throw new Error(`${num} は parts.length (${this.parts.length}) を超過しています.`)
+      }
+      return (type == "start" && num < 0) ? num-1 : num
+    }
+    const checkString = (st: string, type: "start"|"end") => {
+      const idx = this.parts.findIndex(part => part == st)
+      if (idx < 0){
+        throw new Error(`'${st}' は parts には含まれていません.`)
+      }
+      return  type == "end" ? idx+1 : idx
+    }
+
+    const start_idx = (typeof start == "number")
+      ? checkNumber(start, "start")
+      : checkString(start, "start")
+  
+    const end_idx = (!end)
+      ? undefined
+      : (typeof end == "number")
+        ? checkNumber(end, "end")
+        : checkString(end, "end")
+
+    return new PathLike(...this.parts.slice(start_idx, end_idx)).path
+  }
 
 
   /**
